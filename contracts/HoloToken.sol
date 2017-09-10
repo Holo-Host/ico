@@ -1,4 +1,5 @@
 pragma solidity ^0.4.15;
+import "./HoloTokenSupply.sol";
 
 // ERC Token Standard #20 Interface
 // https://github.com/ethereum/EIPs/issues/20
@@ -31,7 +32,7 @@ contract ERC20Interface {
 }
 
 
-contract HoloTokenSupply is ERC20Interface {
+contract HoloToken is ERC20Interface {
   string public constant name = "Holo Token";
   string public constant symbol = "HOLO";
   uint8 public constant decimals = 18;
