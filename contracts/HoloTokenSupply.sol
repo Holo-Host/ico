@@ -6,12 +6,12 @@ contract HoloTokenSupply {
   uint public total_supply;
 
   modifier onlyOwner {
-    if (msg.sender != owner) throw;
+    require(msg.sender == owner);
     _;
   }
 
   modifier onlyUpater {
-    if (msg.sender != updater) throw;
+    require(msg.sender == updater);
     _;
   }
 
