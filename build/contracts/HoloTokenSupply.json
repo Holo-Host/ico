@@ -1,0 +1,79 @@
+{
+  "contract_name": "HoloTokenSupply",
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "total_supply",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "new_updater",
+          "type": "address"
+        }
+      ],
+      "name": "setUpdater",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "token_count_to_add",
+          "type": "uint256"
+        }
+      ],
+      "name": "addTokens",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "updater",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "payable": false,
+      "type": "constructor"
+    }
+  ],
+  "unlinked_binary": "0x6060604052341561000f57600080fd5b5b60008054600160a060020a033216600160a060020a031991821681178355600180549092161790556002555b5b6101e58061004c6000396000f300606060405263ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416633940e9ee81146100695780638da5cb5b1461008e5780639d54f419146100bd578063c6ed8990146100de578063df034cd0146100f6575b600080fd5b341561007457600080fd5b61007c610125565b60405190815260200160405180910390f35b341561009957600080fd5b6100a161012b565b604051600160a060020a03909116815260200160405180910390f35b34156100c857600080fd5b6100dc600160a060020a036004351661013a565b005b34156100e957600080fd5b6100dc600435610182565b005b341561010157600080fd5b6100a16101aa565b604051600160a060020a03909116815260200160405180910390f35b60025481565b600054600160a060020a031681565b60005433600160a060020a0390811691161461015557600080fd5b6001805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0383161790555b5b50565b60015433600160a060020a0390811691161461019d57600080fd5b60028054820190555b5b50565b600154600160a060020a0316815600a165627a7a72305820aafab6c67db96e8a90e094ef9a84cb2f4c8717ae5909e4899230b634b9c8f6740029",
+  "networks": {},
+  "schema_version": "0.0.5",
+  "updated_at": 1505076795806
+}
