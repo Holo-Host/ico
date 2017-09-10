@@ -1,6 +1,5 @@
 pragma solidity ^0.4.15;
 
-
 // ERC Token Standard #20 Interface
 // https://github.com/ethereum/EIPs/issues/20
 contract ERC20Interface {
@@ -36,19 +35,23 @@ contract HoloTokenSupply is ERC20Interface {
   string public constant name = "Holo Token";
   string public constant symbol = "HOLO";
   uint8 public constant decimals = 18;
+
   address public owner;
   address public destroyer;
   uint256 public total_supply;
 
-  // Balances for each account
   mapping(address => uint256) balances;
-
-  // Owner of account approves the transfer of an amount to another account
   mapping(address => mapping (address => uint256)) allowed;
 
-  // Functions with this modifier can only be executed by the owner
+  event Burn(uint256 _amount);
+
   modifier onlyOwner() {
      require(msg.sender == owner);
+     _;
+  }
+
+  modifier onlyDestroyer() {
+     require(msg.sender == destroyer);
      _;
   }
 
@@ -56,10 +59,19 @@ contract HoloTokenSupply is ERC20Interface {
   function FixedSupplyToken() {
      owner = msg.sender;
 
+  function setDestroyer(address _destroyer) onlyOwner {
+    destroyer = _destroyer;
   }
 
-  function totalSupply() constant returns (uint256 ts) {
-     ts = total_supply;
+  function burn(uint256 _amount) onlyDestroyer {
+    require(balances[destroyer] >= _amount && _amount > 0);
+    balances[destroyer] -= _amount;
+    total_supply -= _amount;
+    Burn(_amount);
+  }
+
+  function totalSupply() constant returns (uint256 totalsupply) {
+     return total_supply;
   }
 
   // What is the balance of a particular account?
