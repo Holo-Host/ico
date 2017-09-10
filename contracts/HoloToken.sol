@@ -56,8 +56,10 @@ contract HoloTokenSupply is ERC20Interface {
   }
 
   // Constructor
-  function FixedSupplyToken() {
+  function FixedSupplyToken(HoloTokenSupply supply_contract) {
      owner = msg.sender;
+     total_supply = supply_contract.total_supply();
+  }
 
   function setDestroyer(address _destroyer) onlyOwner {
     destroyer = _destroyer;
