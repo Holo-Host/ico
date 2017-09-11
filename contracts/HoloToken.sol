@@ -39,7 +39,7 @@ contract HoloToken is ERC20Interface {
 
   address public owner;
   address public destroyer;
-  uint256 public totalSupply;
+  uint256 public total_supply;
 
   mapping(address => uint256) balances;
   mapping(address => mapping (address => uint256)) allowed;
@@ -57,9 +57,9 @@ contract HoloToken is ERC20Interface {
   }
 
   // Constructor
-  function FixedSupplyToken(HoloTokenSupply supply_contract) {
+  function HoloToken(HoloTokenSupply supply_contract) payable {
      owner = msg.sender;
-     totalSupply = supply_contract.total_supply();
+     total_supply = supply_contract.total_supply();
   }
 
   function setDestroyer(address _destroyer) onlyOwner {
@@ -69,10 +69,13 @@ contract HoloToken is ERC20Interface {
   function burn(uint256 _amount) onlyDestroyer {
     require(balances[destroyer] >= _amount && _amount > 0);
     balances[destroyer] -= _amount;
-    totalSupply -= _amount;
+    total_supply -= _amount;
     Burn(_amount);
   }
 
+  function totalSupply() constant returns (uint256) {
+    return total_supply;
+  }
   // What is the balance of a particular account?
   function balanceOf(address _owner) constant returns (uint256 balance) {
       return balances[_owner];

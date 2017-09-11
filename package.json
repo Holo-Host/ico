@@ -1,0 +1,27 @@
+{
+  "name": "Holo-ICO",
+  "version": "0.0.0",
+  "description": "Holo ICO contracts",
+  "author": "Nicolas Luck (https://github.com/lucksus)",
+  "requires": true,
+  "lockfileVersion": 1,
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.holochain.net/ico/smart_contracts.git"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-eslint": "^7.2.3",
+    "babel-plugin-transform-es2015-destructuring": "^6.23.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-node6": "^11.0.0",
+    "babel-preset-stage-2": "^6.24.1",
+    "babel-register": "^6.24.1",
+    "bluebird": "^3.5.0",
+    "chai": "^4.1.2",
+    "chai-http": "^3.0.0",
+    "coffee-script": "^1.12.7",
+    "lightsaber": "^0.6.10",
+    "mocha": "^3.5.2"
+  }
+}
