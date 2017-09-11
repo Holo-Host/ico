@@ -110,47 +110,6 @@ contract('HoloToken', (accounts) => {
     })
   })
 
-
-    describe('#close', () => {
-      // this must go first, for reasons unknown...
-      contractIt('should fire Close event', (done) => {
-        let events = token.Close()
-
-        Promise.resolve().then(() => {
-          return token.close()
-        }).then(() => {
-          return firstEvent(events)
-        }).then((log) => {
-          expect(log.args._closedBy).to.equal(accounts[0])
-          done()
-          return
-        }).catch(done)
-      })
-
-      //contractShouldThrowIfClosed(() => {
-      //  return token.close()
-      //})
-
-      contractShouldThrowIfEtherSent(() => {
-        return token.close({value: 1})
-      })
-
-      contractShouldThrowForNonOwner(() => {
-        return token.close({from: accounts[1]})
-      })
-
-      contractIt('owner can close the contract', (done) => {
-        Promise.resolve().then(() => {
-          return token.close()
-        }).then(() => {
-          return token.isClosed.call()
-        }).then((isClosed) => {
-          expect(isClosed).to.equal(true)
-          return
-        }).then(done).catch(done)
-      })
-    })
-
     describe('#allowance', () => {
       contractShouldThrowIfEtherSent(() => {
         return token.allowance(accounts[1], accounts[2], {value: 1})
