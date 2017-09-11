@@ -130,7 +130,7 @@ contract('HoloToken', (accounts) => {
         Promise.resolve().then(() => {
           return token.decimals.call()
         }).then((decimals) => {
-          expect(decimals.toNumber()).to.equal(0)
+          expect(decimals.toNumber()).to.equal(18)
           return
         }).then(done).catch(done)
       })
@@ -140,8 +140,8 @@ contract('HoloToken', (accounts) => {
       contractIt('should return the name for the contract', (done) => {
         Promise.resolve().then(() => {
           return token.name.call()
-        }).then((decimals) => {
-          expect(decimals).to.equal('Generic CoMakery DynamicToken')
+        }).then((name) => {
+          expect(name).to.equal('Holo Token')
           return
         }).then(done).catch(done)
       })
@@ -151,8 +151,8 @@ contract('HoloToken', (accounts) => {
       contractIt('should return the symbol for the contract', (done) => {
         Promise.resolve().then(() => {
           return token.symbol.call()
-        }).then((decimals) => {
-          expect(decimals).to.equal('GCMD')
+        }).then((symbol) => {
+          expect(symbol).to.equal('HOLO')
           return
         }).then(done).catch(done)
       })
