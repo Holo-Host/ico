@@ -1,55 +1,16 @@
 pragma solidity ^0.4.15;
 import "./HoloTokenSupply.sol";
+import "zeppelin-solidity/contracts/token/StandardToken.sol";
+import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
-// ERC Token Standard #20 Interface
-// https://github.com/ethereum/EIPs/issues/20
-contract ERC20Interface {
-  // Get the total token supply
-  function totalSupply() constant returns (uint256);
-
-  // Get the account balance of another account with address _owner
-  function balanceOf(address _owner) constant returns (uint256 balance);
-
-  // Send _value amount of tokens to address _to
-  function transfer(address _to, uint256 _value) returns (bool success);
-
-  // Send _value amount of tokens from address _from to address _to
-  function transferFrom(address _from, address _to, uint256 _value) returns (bool success);
-
-  // Allow _spender to withdraw from your account, multiple times, up to the _value amount.
-  // If this function is called again it overwrites the current allowance with _value.
-  // this function is required for some DEX functionality
-  function approve(address _spender, uint256 _value) returns (bool success);
-
-  // Returns the amount which _spender is still allowed to withdraw from _owner
-  function allowance(address _owner, address _spender) constant returns (uint256 remaining);
-
-  // Triggered when tokens are transferred.
-  event Transfer(address indexed _from, address indexed _to, uint256 _value);
-
-  // Triggered whenever approve(address _spender, uint256 _value) is called.
-  event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-}
-
-
-contract HoloToken is ERC20Interface {
+contract HoloToken is StandardToken, Ownable {
   string public constant name = "Holo Token";
   string public constant symbol = "HOLO";
   uint8 public constant decimals = 18;
 
-  address public owner;
   address public destroyer;
-  uint256 public total_supply;
-
-  mapping(address => uint256) balances;
-  mapping(address => mapping (address => uint256)) allowed;
 
   event Burn(uint256 _amount);
-
-  modifier onlyOwner() {
-     require(msg.sender == owner);
-     _;
-  }
 
   modifier onlyDestroyer() {
      require(msg.sender == destroyer);
@@ -58,8 +19,7 @@ contract HoloToken is ERC20Interface {
 
   // Constructor
   function HoloToken(HoloTokenSupply supply_contract) payable {
-     owner = msg.sender;
-     total_supply = supply_contract.total_supply();
+     totalSupply = supply_contract.total_supply();
   }
 
   function setDestroyer(address _destroyer) onlyOwner {
@@ -69,66 +29,7 @@ contract HoloToken is ERC20Interface {
   function burn(uint256 _amount) onlyDestroyer {
     require(balances[destroyer] >= _amount && _amount > 0);
     balances[destroyer] -= _amount;
-    total_supply -= _amount;
+    totalSupply -= _amount;
     Burn(_amount);
-  }
-
-  function totalSupply() constant returns (uint256) {
-    return total_supply;
-  }
-  // What is the balance of a particular account?
-  function balanceOf(address _owner) constant returns (uint256 balance) {
-      return balances[_owner];
-  }
-
-   // Transfer the balance from owner's account to another account
-   function transfer(address _to, uint256 _amount) returns (bool success) {
-       if (balances[msg.sender] >= _amount
-           && _amount > 0
-           && balances[_to] + _amount > balances[_to]) {
-           balances[msg.sender] -= _amount;
-           balances[_to] += _amount;
-           Transfer(msg.sender, _to, _amount);
-           return true;
-       } else {
-           return false;
-       }
-   }
-
-   // Send _value amount of tokens from address _from to address _to
-   // The transferFrom method is used for a withdraw workflow, allowing contracts to send
-   // tokens on your behalf, for example to "deposit" to a contract address and/or to charge
-   // fees in sub-currencies; the command should fail unless the _from account has
-   // deliberately authorized the sender of the message via some mechanism; we propose
-   // these standardized APIs for approval:
-   function transferFrom(
-       address _from,
-       address _to,
-       uint256 _amount
-  ) returns (bool success) {
-     if (balances[_from] >= _amount
-         && allowed[_from][msg.sender] >= _amount
-         && _amount > 0
-         && balances[_to] + _amount > balances[_to]) {
-         balances[_from] -= _amount;
-         allowed[_from][msg.sender] -= _amount;
-         balances[_to] += _amount;
-         Transfer(_from, _to, _amount);
-         return true;
-     } else {
-         return false;
-     }
-  }
-
-  // Allow _spender to withdraw from your account, multiple times, up to the _value amount.
-  // If this function is called again it overwrites the current allowance with _value.
-  function approve(address _spender, uint256 _amount) returns (bool success) {
-     allowed[msg.sender][_spender] = _amount;
-     Approval(msg.sender, _spender, _amount);
-     return true;
-  }
-
-  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
-     return allowed[_owner][_spender];
   }
 }
