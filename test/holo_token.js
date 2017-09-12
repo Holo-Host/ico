@@ -509,7 +509,7 @@ contract('HoloToken', (accounts) => {
       })
     })
 
-
+/*
     describe('#upgrade', () => {
       const upgradeAccount = '0x00000f31d5d8c3146ea6f5c31c7f571c00000000'
 
@@ -558,7 +558,7 @@ contract('HoloToken', (accounts) => {
         })
       })
     })
-
+*/
     describe('#burn', () => {
       contractShouldThrowIfEtherSent(() => {
         return token.burn(5, {from: accounts[0], value: 1})
