@@ -384,32 +384,6 @@ contract('HoloToken', (accounts) => {
         await token.approve(spender, 300, {from: manager})
         await token.transferFrom(manager, recipient, 200, {from: spender})
         assert(false)
-        return
-
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          manager = users.manager.address
-          spender = users.spender.address
-          recipient = users.recipient.address
-          return token.mint(manager, 100)
-        }).then(() => {
-          return token.approve(spender, 300, {from: manager})
-        }).then(() => {
-          return token.transferFrom(manager, recipient, 200, {from: spender})
-        }).then(() => {
-          return getUsers(token)
-        }).then((ending) => {
-          expect(ending.manager.balance).to.equal(100)
-          expect(ending.spender.balance).to.equal(0)
-          expect(ending.recipient.balance).to.equal(0)
-          return
-        }).then(() => {
-          return token.allowance.call(manager, spender, {from: anyone})
-        }).then((allowance) => {
-          expect(allowance.toNumber()).to.equal(300)
-          return
-        }).then(done).catch(done)
       })
 
       contractShouldThrow('spender cannot send a negative token amount', async (done) => {
@@ -423,41 +397,7 @@ contract('HoloToken', (accounts) => {
         await token.approve(spender, 300, {from: manager})
         await token.transferFrom(manager, recipient, -1, {from: spender})
         assert(false)
-        return
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          manager = users.manager.address
-          spender = users.spender.address
-          recipient = users.recipient.address
-          return token.mint(manager, 100)
-        }).then(() => {
-          return token.mint(recipient, 100)
-        }).then(() => {
-          return token.approve(spender, 100, {from: manager})
-        }).then(() => {
-          return token.approve(spender, 100, {from: recipient})
-        }).then(() => {
-          return token.transferFrom(manager, recipient, -1, {from: spender})
-        }).then(() => {
-          return getUsers(token)
-        }).then((ending) => {
-          expect(ending.manager.balance).to.equal(100)
-          expect(ending.spender.balance).to.equal(0)
-          expect(ending.recipient.balance).to.equal(100)
-          return
-        }).then(() => {
-          return token.allowance.call(manager, spender, {from: anyone})
-        }).then((allowance) => {
-          expect(allowance.toNumber()).to.equal(100)
-          return
-        }).then(() => {
-          return token.allowance.call(recipient, spender, {from: anyone})
-        }).then((allowance) => {
-          expect(allowance.toNumber()).to.equal(100)
-          return
-        }).then(done).catch(done)
       })
     })
 
