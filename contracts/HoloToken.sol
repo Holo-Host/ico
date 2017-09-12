@@ -1,9 +1,7 @@
 pragma solidity ^0.4.15;
-import "./HoloTokenSupply.sol";
-import "zeppelin-solidity/contracts/token/StandardToken.sol";
-import "zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "zeppelin-solidity/contracts/token/MintableToken.sol";
 
-contract HoloToken is StandardToken, Ownable {
+contract HoloToken is MintableToken {
   string public constant name = "Holo Token";
   string public constant symbol = "HOLO";
   uint8 public constant decimals = 18;
@@ -15,11 +13,6 @@ contract HoloToken is StandardToken, Ownable {
   modifier onlyDestroyer() {
      require(msg.sender == destroyer);
      _;
-  }
-
-  // Constructor
-  function HoloToken(HoloTokenSupply supply_contract) payable {
-     totalSupply = supply_contract.total_supply();
   }
 
   function setDestroyer(address _destroyer) onlyOwner {
