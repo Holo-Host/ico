@@ -8,7 +8,7 @@ export const contractShouldThrow = (description, functionToCall, options, expect
   contractIt(description, (done) => {
     Promise.resolve().then(functionToCall
     ).then(() => {
-      throw new Error('Expected solidity error to be thown from contract, but was not')
+      throw new Error('Expected solidity error to be thrown from contract, but was not')
     }).catch((error) => {
       expectedErrorMessage = expectedErrorMessage || 'VM Exception while processing transaction: invalid opcode'
       if (!error.message || error.message.search(expectedErrorMessage) < 0) throw error
