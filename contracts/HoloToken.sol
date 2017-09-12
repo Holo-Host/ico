@@ -8,7 +8,7 @@ contract HoloToken is MintableToken {
 
   address public destroyer;
 
-  event Burn(uint256 _amount);
+  event Burn(uint256 amount);
 
   modifier onlyDestroyer() {
      require(msg.sender == destroyer);

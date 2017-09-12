@@ -508,95 +508,52 @@ contract('HoloToken', (accounts) => {
       //  return token.burn(1)
       //})
 
-      contractIt('account owner can burn their tokens', (done) => {
+      contractShouldThrow('should throw if non-destroyer calls burn', async () => {
         let bob = accounts[1]
-        Promise.resolve().then(() => {
-          return token.mint(bob, 11, 'proof1')
-        }).then(() => {
-          return token.totalSupply.call()
-        }).then((totalSupply) => {
-          expect(totalSupply.toNumber()).to.equal(11)
-          return
-        }).then(() => {
-          return token.burn(10, {from: bob})
-        }).then(() => {
-          return token.balanceOf.call(bob)
-        }).then((balance) => {
-          expect(balance.toNumber()).to.equal(1)
-          return token.totalSupply.call()
-        }).then((totalSupply) => {
-          expect(totalSupply.toNumber()).to.equal(1)
-          return
-        }).then(done).catch(done)
+        await token.mint(bob, 11)
+        let totalSupply = await token.totalSupply.call()
+        expect(totalSupply.toNumber()).to.equal(11)
+        await token.burn(10, {from: bob})
+        assert(false)
       })
 
-      contractIt('burns no tokens if amount is greater than tokens available', (done) => {
+      contractIt('destroyer can burn their tokens', async () => {
         let bob = accounts[1]
-        Promise.resolve().then(() => {
-          return token.mint(bob, 1, 'proof1')
-        }).then(() => {
-          return token.totalSupply.call()
-        }).then((totalSupply) => {
-          return expect(totalSupply.toNumber()).to.equal(1)
-        }).then(() => {
-          return token.burn(10, {from: bob})
-        }).then(() => {
-          return token.balanceOf.call(bob)
-        }).then((balance) => {
-          expect(balance.toNumber()).to.equal(1)
-          return token.totalSupply.call()
-        }).then((totalSupply) => {
-          expect(totalSupply.toNumber()).to.equal(1)
-          return
-        }).then(done).catch(done)
+        await token.mint(bob, 11)
+        let totalSupply = await token.totalSupply.call()
+        expect(totalSupply.toNumber()).to.equal(11)
+
+        await token.setDestroyer(bob, {from: accounts[0]})
+        await token.burn(10, {from: bob})
+        let balance = await token.balanceOf.call(bob)
+        expect(balance.toNumber()).to.equal(1)
+        totalSupply = await token.totalSupply.call()
+        expect(totalSupply.toNumber()).to.equal(1)
       })
 
-      contractIt('should fire Burn event when #burn triggered', (done) => {
+      contractShouldThrow('burns no tokens if amount is greater than tokens available', async (done) => {
+        let bob = accounts[1]
+        await token.mint(bob, 1)
+        let totalSupply = await token.totalSupply.call()
+        expect(totalSupply.toNumber()).to.equal(1)
+
+        await token.setDestroyer(bob, {from: accounts[0]})
+        await token.burn(10, {from: bob})
+        assert(false)
+        let balance = await token.balanceOf.call(bob)
+        expect(balance.toNumber()).to.equal(1)
+        totalSupply = await token.totalSupply.call()
+        expect(totalSupply.toNumber()).to.equal(1)
+      })
+
+      contractIt('should fire Burn event when #burn triggered', async () => {
         let events = token.Burn()
-        let starting
-
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          starting = users
-          return token.mint(starting.bob.address, 11)
-        }).then(() => {
-          return token.burn(10, {from: starting.bob.address})
-        }).then(() => {
-          return firstEvent(events)
-        }).then((log) => {
-          expect(log.args._burnFrom).to.equal(starting.bob.address)
-          expect(log.args._amount.toNumber()).to.equal(10)
-          done()
-          return
-        }).catch(done)
-      })
-    })
-
-    // This kills the server unless it runs last...
-    describe('#destroyContract', () => {
-      contractShouldThrowIfEtherSent(() => {
-        return token.destroyContract({value: 1})
-      })
-
-      contractShouldThrowForNonOwner(() => {
-        return token.destroyContract({from: accounts[1]})
-      })
-
-      contractIt('owner can self destruct the contract', (done) => {
-        Promise.resolve().then(() => {
-          return token.contractOwner()
-        }).then((owner) => {
-          expect(owner).to.equal(accounts[0])
-          return
-        }).then(() => {
-          return token.destroyContract()
-        }).then(() => {
-          return token.contractOwner()
-        }).then((owner) => {
-          expect(owner).to.equal('0x')
-          return
-        }).then(done).catch(done)
+        let users = await getUsers(token)
+        await token.mint(users.bob.address, 11)
+        await token.setDestroyer(users.bob.address)
+        await token.burn(10, {from: users.bob.address})
+        let log = await firstEvent(events)
+        expect(log.args.amount.toNumber()).to.equal(10)
       })
     })
 })
