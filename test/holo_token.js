@@ -314,8 +314,6 @@ contract('HoloToken', (accounts) => {
           recipient = users.recipient.address
           return token.mint(manager, 200)
         }).then(() => {
-          return //firstEvent(token.Transfer())
-        }).then(() => {
           return token.approve(spender, 100, {from: manager})
         }).then(() => {
           return token.transferFrom(manager, recipient, 50, {from: spender})
