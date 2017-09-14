@@ -63,6 +63,7 @@ contract('HoloToken', (accounts) => {
 
   beforeEach(async () => {
     token = await HoloToken.new()
+    await token.setMinter(accounts[0])
   })
 
   describe('expected test conditions', () => {
@@ -552,6 +553,64 @@ contract('HoloToken', (accounts) => {
         await token.burn(10, {from: users.bob.address})
         let log = await firstEvent(events)
         expect(log.args.amount.toNumber()).to.equal(10)
+      })
+    })
+
+    describe('mint', () => {
+      contractShouldThrowIfEtherSent(() => {
+        return token.mint(accounts[1], 5, {from: accounts[0], value: 1})
+      })
+
+      contractShouldThrow('should throw if called by non-minter', async () => {
+        return token.mint(accounts[1], 5, {from: accounts[1]})
+      })
+
+      it('should create tokens', async () => {
+        let before = await token.balanceOf(accounts[1])
+        await token.mint(accounts[1], 5)
+        let after = await token.balanceOf(accounts[1])
+        expect(after.toNumber()).to.equal(before.toNumber() + 5)
+      })
+
+      it('should be callable by the address set by setMinter', async () => {
+        let newMinter = accounts[5]
+        await token.setMinter(newMinter)
+        let before = await token.balanceOf(accounts[1])
+        await token.mint(accounts[1], 5, {from: newMinter})
+        let after = await token.balanceOf(accounts[1])
+        expect(after.toNumber()).to.equal(before.toNumber() + 5)
+      })
+
+      contractShouldThrow('should throw when called by the owner who is not the minter', async () => {
+        let newMinter = accounts[5]
+        await token.setMinter(newMinter)
+        await token.mint(accounts[1], 5, {from: accounts[0]})
+        assert(false)
+      })
+
+      contractShouldThrow('should throw if minter tries minting after finishMinting() was called', async () => {
+        let minter = accounts[5]
+        await token.setMinter(minter)
+        await token.finishMinting()
+        await token.mint(accounts[1], 100, {from: minter})
+        assert(false)
+      })
+
+      contractShouldThrow('should throw if finishMinting() is called by non-owner', async () => {
+        return token.finishMinting({from: accounts[1]})
+      })
+
+      it('should increase totalSupply accordingly', async () => {
+        let amount = 1337
+        let before = await token.totalSupply()
+        await token.mint(accounts[1], amount)
+        let after = await token.totalSupply()
+        expect(after.toNumber()).to.equal(before.toNumber() + amount)
+      })
+
+      contractShouldThrow('should throw when called with negative amount', async () => {
+        await token.mint(accounts[1], 100)
+        await token.mint(accounts[1], -1)
       })
     })
 })
