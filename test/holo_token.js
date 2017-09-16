@@ -13,7 +13,8 @@ import {
   contractShouldThrowIfClosedOnly,
   contractShouldThrowIfEtherSent,
   contractShouldThrowIfEtherSentOnly,
-  contractShouldThrowOnly
+  contractShouldThrowOnly,
+  firstEvent
 } from './testHelper'
 
 contract('HoloToken', (accounts) => {
@@ -45,19 +46,6 @@ contract('HoloToken', (accounts) => {
         alice, bob, charlie,
         manager, spender, recipient
       }
-    })
-  }
-
-  const firstEvent = (events) => {
-    return new Promise((resolve, reject) => {
-      events.watch((error, log) => {
-        if (error) {
-          reject(error)
-        } else {
-          events.stopWatching()
-          resolve(log)
-        }
-      })
     })
   }
 

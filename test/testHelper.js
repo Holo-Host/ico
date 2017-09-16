@@ -58,3 +58,16 @@ export const contractIt = (name, func, options) => {
     })
   })
 }
+
+export const firstEvent = (events) => {
+  return new Promise((resolve, reject) => {
+    events.watch((error, log) => {
+      if (error) {
+        reject(error)
+      } else {
+        events.stopWatching()
+        resolve(log)
+      }
+    })
+  })
+}
