@@ -3,7 +3,7 @@ import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract HoloTokenSupply is Ownable {
   address public updater;
-  uint public total_supply;
+  uint256 public total_supply;
 
   modifier onlyUpater {
     require(msg.sender == updater);
@@ -19,7 +19,7 @@ contract HoloTokenSupply is Ownable {
     updater = new_updater;
   }
 
-  function addTokens(uint token_count_to_add) onlyUpater {
+  function addTokens(uint256 token_count_to_add) onlyUpater {
     total_supply += token_count_to_add;
   }
 
