@@ -86,7 +86,16 @@ contract HoloTokenSale is Ownable{
     return escrow[buyer];
   }
 
-  function withdraw(address beneficiary) {
+  function withdraw() {
+    address beneficiary = msg.sender;
+    withdrawInternal(beneficiary);
+  }
+
+  function withdrawFor(address beneficiary) onlyOwner {
+    withdrawInternal(beneficiary);
+  }
+
+  function withdrawInternal(address beneficiary) internal {
     require(escrow[beneficiary] > 0);
     uint256 depositedValue = escrow[beneficiary];
     escrow[beneficiary] = 0;

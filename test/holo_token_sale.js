@@ -110,40 +110,60 @@ contract('HoloTokenSale', (accounts) => {
 
         describe('withdraw', () => {
           it('should send back the deposited ether', async () => {
+            let gasCost = 3766299999993900;
+
             let before = await web3.eth.getBalance(tokenBuyer1)
-            await sale.withdraw(tokenBuyer1)
+            await sale.withdraw({from: tokenBuyer1})
             let escrow = await sale.inEscrowFor.call(tokenBuyer1)
             expect(escrow.toNumber()).to.equal(0)
             let after = await web3.eth.getBalance(tokenBuyer1)
-            let differenceWei = '' + (after.toNumber() - before.toNumber())
-            expect(differenceWei).to.equal(web3.toWei(2, 'ether'))
+            let differenceWei = (after.toNumber() - before.toNumber())
+            expect(differenceWei + gasCost + 1).to.be.at.least(2000000000000000000)
 
             before = await web3.eth.getBalance(tokenBuyer2)
-            await sale.withdraw(tokenBuyer2)
+            await sale.withdraw({from: tokenBuyer2})
             escrow = await sale.inEscrowFor.call(tokenBuyer2)
             expect(escrow.toNumber()).to.equal(0)
             after = await web3.eth.getBalance(tokenBuyer2)
-            differenceWei = '' + (after.toNumber() - before.toNumber())
-            expect(differenceWei).to.equal(web3.toWei(5, 'ether'))
+            differenceWei = (after.toNumber() - before.toNumber())
+            expect(differenceWei + gasCost + 1).to.be.at.least(5000000000000000000)
 
             before = await web3.eth.getBalance(tokenBuyer3)
-            await sale.withdraw(tokenBuyer3)
+            await sale.withdraw({from: tokenBuyer3})
             escrow = await sale.inEscrowFor.call(tokenBuyer3)
             expect(escrow.toNumber()).to.equal(0)
             after = await web3.eth.getBalance(tokenBuyer3)
-            differenceWei = '' + (after.toNumber() - before.toNumber())
-            expect(differenceWei).to.equal(web3.toWei(1, 'ether'))
+            differenceWei = (after.toNumber() - before.toNumber())
+            expect(differenceWei + gasCost + 1).to.be.at.least(1000000000000000000)
+          })
+        })
+
+        describe('withdrawFor', () => {
+          contractShouldThrow('should not be callable by non-owner', async () => {
+            await sale.withdrawFor(tokenBuyer1, {from: tokenBuyer2})
+          })
+
+          it('should send back deposited ether to mentioned buyer', async () => {
+            let gasCost = 3766299999993900;
+
+            let before = await web3.eth.getBalance(tokenBuyer1)
+            await sale.withdrawFor(tokenBuyer1, {from: owner})
+            let escrow = await sale.inEscrowFor.call(tokenBuyer1)
+            expect(escrow.toNumber()).to.equal(0)
+            let after = await web3.eth.getBalance(tokenBuyer1)
+            let differenceWei = (after.toNumber() - before.toNumber())
+            expect(differenceWei + gasCost + 1).to.be.at.least(2000000000000000000)
           })
         })
 
         contractShouldThrow('should throw if nothing in escrow for beneficiary', async () => {
-          await sale.withdraw(updater)
+          await sale.withdraw({from: updater})
         })
 
         contractShouldThrow('should throw if already withdrawn', async () => {
-          await sale.withdraw(tokenBuyer1)
+          await sale.withdraw({from: tokenBuyer1})
           assert(true)
-          await sale.withdraw(tokenBuyer1)
+          await sale.withdraw({from: tokenBuyer1})
         })
 
 
@@ -265,7 +285,7 @@ contract('HoloTokenSale', (accounts) => {
 
             describe('on the third day with 2 more supply and after one buyer has withdrawn his one remaining ether', () => {
               beforeEach(async () => {
-                await sale.withdraw(tokenBuyer4, {from: tokenBuyer4})
+                await sale.withdraw({from: tokenBuyer4})
                 await supply_contract.addTokens(web3.toWei(2, 'ether'))
 
                 let demand = await sale.demand()
