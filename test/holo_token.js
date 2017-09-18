@@ -50,7 +50,7 @@ contract('HoloToken', (accounts) => {
   }
 
   beforeEach(async () => {
-    token = await HoloToken.new()
+    token = await HoloToken.deployed()
     await token.setMinter(accounts[0])
   })
 
