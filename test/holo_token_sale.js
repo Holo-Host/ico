@@ -65,8 +65,8 @@ contract('HoloTokenSale', (accounts) => {
         expect(log.args.amount.toString()).to.equal(web3.toWei(2, 'ether'))
         let escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
         expect(escrowOfBuyer1.toString()).to.equal(twoEther)
-        let unhandled = await sale.unhandled(0)
-        expect(unhandled).to.equal(tokenBuyer1)
+        let beneficiaries = await sale.beneficiaries(0)
+        expect(beneficiaries).to.equal(tokenBuyer1)
         demand = await sale.demand()
         expect(demand.toString()).to.equal(web3.toWei(2, 'ether'))
 
@@ -83,12 +83,12 @@ contract('HoloTokenSale', (accounts) => {
         expect(log.args.amount.toString()).to.equal(web3.toWei(2, 'ether'))
         escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
         let escrowOfBuyer2 = await sale.inEscrowFor.call(tokenBuyer2)
-        unhandled = await sale.unhandled(1)
+        beneficiaries = await sale.beneficiaries(1)
         demand = await sale.demand()
 
         expect(escrowOfBuyer1.toString()).to.equal(twoEther)
         expect(escrowOfBuyer2.toString()).to.equal(twoEther)
-        expect(unhandled).to.equal(tokenBuyer2)
+        expect(beneficiaries).to.equal(tokenBuyer2)
         expect(demand.toString()).to.equal(web3.toWei(4, 'ether'))
       })
 
@@ -99,9 +99,9 @@ contract('HoloTokenSale', (accounts) => {
           await sale.buyTokens(tokenBuyer3, {value: web3.toWei(1, 'ether'), from: tokenBuyer3})
         })
 
-        it('should have 3 unhandled asks', async () => {
-          let unhandledLength = await sale.unhandledLength.call()
-          expect(unhandledLength.toNumber()).to.equal(3)
+        it('should have 3 beneficiaries asks', async () => {
+          let beneficiariesLength = await sale.beneficiariesLength.call()
+          expect(beneficiariesLength.toNumber()).to.equal(3)
         })
 
         it('should have a demand of 8', async () => {
@@ -119,7 +119,7 @@ contract('HoloTokenSale', (accounts) => {
             expect(escrow.toNumber()).to.equal(0)
             let after = await web3.eth.getBalance(tokenBuyer1)
             let differenceWei = (after.toNumber() - before.toNumber())
-            expect(differenceWei + gasCost + 1).to.be.at.least(2000000000000000000)
+            expect(differenceWei + gasCost + 100000).to.be.at.least(2000000000000000000)
 
             before = await web3.eth.getBalance(tokenBuyer2)
             await sale.withdraw({from: tokenBuyer2})
@@ -127,7 +127,7 @@ contract('HoloTokenSale', (accounts) => {
             expect(escrow.toNumber()).to.equal(0)
             after = await web3.eth.getBalance(tokenBuyer2)
             differenceWei = (after.toNumber() - before.toNumber())
-            expect(differenceWei + gasCost + 1).to.be.at.least(5000000000000000000)
+            expect(differenceWei + gasCost + 100000).to.be.at.least(5000000000000000000)
 
             before = await web3.eth.getBalance(tokenBuyer3)
             await sale.withdraw({from: tokenBuyer3})
@@ -135,7 +135,7 @@ contract('HoloTokenSale', (accounts) => {
             expect(escrow.toNumber()).to.equal(0)
             after = await web3.eth.getBalance(tokenBuyer3)
             differenceWei = (after.toNumber() - before.toNumber())
-            expect(differenceWei + gasCost + 1).to.be.at.least(1000000000000000000)
+            expect(differenceWei + gasCost + 100000).to.be.at.least(1000000000000000000)
           })
         })
 
@@ -204,9 +204,9 @@ contract('HoloTokenSale', (accounts) => {
             expect(demand.toNumber()).to.equal(0)
           })
 
-          it('should have resetted the "unhandled" list', async () => {
-            let unhandledLength = await sale.unhandledLength.call()
-            expect(unhandledLength.toNumber()).to.equal(0)
+          it('should have resetted the "beneficiaries" list', async () => {
+            let beneficiariesLength = await sale.beneficiariesLength.call()
+            expect(beneficiariesLength.toNumber()).to.equal(0)
           })
 
           it('should have resetted the escrows for all buyers', async () => {
@@ -259,9 +259,9 @@ contract('HoloTokenSale', (accounts) => {
               expect(demand.toString()).to.equal(web3.toWei(4, 'ether'))
             })
 
-            it('should have left the "unhandled" list as is', async () => {
-              let unhandledLength = await sale.unhandledLength.call()
-              expect(unhandledLength.toNumber()).to.equal(3)
+            it('should have left the "beneficiaries" list as is', async () => {
+              let beneficiariesLength = await sale.beneficiariesLength.call()
+              expect(beneficiariesLength.toNumber()).to.equal(3)
             })
 
             it('should have left half the ethers in escrows for all buyers', async () => {
@@ -313,9 +313,9 @@ contract('HoloTokenSale', (accounts) => {
                 expect(demand.toString()).to.equal('1000000000000000001')
               })
 
-              it('should have still two buyers in the unhandled list', async () => {
-                let unhandledLength = await sale.unhandledLength.call()
-                expect(unhandledLength.toNumber()).to.equal(2)
+              it('should have still two buyers in the beneficiaries list', async () => {
+                let beneficiariesLength = await sale.beneficiariesLength.call()
+                expect(beneficiariesLength.toNumber()).to.equal(2)
               })
 
               it('should have left 1/3 the remaining ethers in escrows for all buyers', async () => {

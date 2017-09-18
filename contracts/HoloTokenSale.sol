@@ -22,7 +22,7 @@ contract HoloTokenSale is Ownable{
   uint256 public rate;
 
   mapping(address => uint256) public escrow;
-  address[] public unhandled;
+  address[] public beneficiaries;
   uint256 public demand;
 
   event AskAdded(address purchaser, address beneficiary, uint256 value, uint256 amount);
@@ -74,7 +74,7 @@ contract HoloTokenSale is Ownable{
     escrow[beneficiary] = escrow[beneficiary].add(weiAmount);
     uint256 amountOfHolosAsked = holosForWei(weiAmount);
     demand = demand.add(amountOfHolosAsked);
-    unhandled.push(beneficiary);
+    beneficiaries.push(beneficiary);
     AskAdded(msg.sender, beneficiary, weiAmount, amountOfHolosAsked);
   }
 
@@ -96,13 +96,13 @@ contract HoloTokenSale is Ownable{
     uint256 depositedValue = escrow[beneficiary];
     escrow[beneficiary] = 0;
     demand = demand.sub(holosForWei(depositedValue));
-    for(uint i=0; i<unhandled.length; i++) {
-      if(unhandled[i] == beneficiary) {
-        unhandled[i] = unhandled[unhandled.length-1];
+    for(uint i=0; i<beneficiaries.length; i++) {
+      if(beneficiaries[i] == beneficiary) {
+        beneficiaries[i] = beneficiaries[beneficiaries.length-1];
       }
     }
-    delete unhandled[unhandled.length-1];
-    unhandled.length -= 1;
+    delete beneficiaries[beneficiaries.length-1];
+    beneficiaries.length -= 1;
     beneficiary.transfer(depositedValue);
     Withdrawn(beneficiary, depositedValue);
   }
@@ -113,19 +113,19 @@ contract HoloTokenSale is Ownable{
     uint256 weiToSpent;
     uint256 totalWeiConverted = 0;
     if(demand < unsoldTokens) {
-      for(uint i=0; i<unhandled.length; i++) {
-        beneficiary = unhandled[i];
+      for(uint i=0; i<beneficiaries.length; i++) {
+        beneficiary = beneficiaries[i];
         weiToSpent = escrow[beneficiary];
         if ( weiToSpent > 0 ) {
             exchangeWeiForHolos(beneficiary, weiToSpent);
             totalWeiConverted = totalWeiConverted.add(weiToSpent);
         }
       }
-      delete unhandled;
+      delete beneficiaries;
     } else {
       uint256 ratio_per_wei = unsoldTokens * 10000000000000000000000 / demand;
-      for(i=0; i<unhandled.length; i++) {
-        beneficiary = unhandled[i];
+      for(i=0; i<beneficiaries.length; i++) {
+        beneficiary = beneficiaries[i];
         weiToSpent = escrow[beneficiary] * ratio_per_wei / 10000000000000000000000;
         if ( weiToSpent > 0 ) {
             exchangeWeiForHolos(beneficiary, weiToSpent);
@@ -160,7 +160,11 @@ contract HoloTokenSale is Ownable{
     return block.number > endBlock;
   }
 
-  function unhandledLength() public constant returns (uint) {
-    return unhandled.length;
+  function beneficiariesLength() public constant returns (uint) {
+    return beneficiaries.length;
+  }
+
+  function finalize() onlyOwner {
+
   }
 }
