@@ -139,105 +139,58 @@ contract('HoloToken', (accounts) => {
         return token.transfer(accounts[0], 10, {value: 1})
       })
 
-      //contractShouldThrowIfClosed(() => {
-      //  return token.transfer(accounts[0], 1)
-      //})
+      contractShouldThrow('should throw if minting was not finished', () => {
+        return token.transfer(accounts[0], 1)
+      })
 
-      contractIt('should transfer tokens from contract owner to a receiver', (done) => {
-        let starting
+      describe('after minting', () => {
+        beforeEach(async () => {
+          let starting = await getUsers(token)
+          await token.mint(starting.alice.address, 20)
+          await token.finishMinting()
+        })
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          starting = users
-          return token.mint(starting.alice.address, 20)
-        }).then(() => {
-          return token.transfer(starting.bob.address, 5, {from: starting.alice.address})
-        }).then(() => {
-          return getUsers(token)
-        }).then((ending) => {
+
+        contractIt('should transfer tokens from contract owner to a receiver', async () => {
+          let starting = await getUsers(token)
+          await token.transfer(starting.bob.address, 5, {from: starting.alice.address})
+          let ending = await getUsers(token)
+
           expect(ending.alice.balance).to.equal(15)
           expect(ending.bob.balance).to.equal(5)
-          return
-        }).then(done).catch(done)
-      })
+        })
 
-      contractIt('should transfer tokens from user to a user', (done) => {
-        let starting
+        contractIt('should transfer tokens from user to a user', async () => {
+          let starting = await getUsers(token)
+          await token.transfer(starting.bob.address, 5, {from: starting.alice.address})
+          await token.transfer(starting.charlie.address, 5, {from: starting.bob.address})
+          let ending = await getUsers(token)
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          starting = users
-          return token.mint(starting.alice.address, 20)
-        }).then(() => {
-          return token.transfer(starting.bob.address, 5, {from: starting.alice.address})
-        }).then(() => {
-          return token.transfer(starting.charlie.address, 5, {from: starting.bob.address})
-        }).then(() => {
-          return getUsers(token)
-        }).then((ending) => {
           expect(ending.alice.balance).to.equal(15)
           expect(ending.bob.balance).to.equal(0)
           expect(ending.charlie.balance).to.equal(5)
-          return
-        }).then(done).catch(done)
-      })
+        })
 
-      contractIt('should allow the token owner to transfer tokens to other users', (done) => {
-        let starting
+        contractIt('should fire a Transfer event when a transfer is sucessful', async () => {
+          let starting = await getUsers(token)
+          await token.transfer(starting.bob.address, 5, {from: starting.alice.address})
+          let log = await firstEvent(token.Transfer())
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          starting = users
-          return token.mint(starting.alice.address, 20)
-        }).then(() => {
-          return token.transfer(starting.bob.address, 5, {from: starting.alice.address})
-        }).then(() => {
-          return token.transfer(starting.charlie.address, 5, {from: starting.bob.address})
-        }).then(() => {
-          return getUsers(token)
-        }).then((ending) => {
-          expect(ending.alice.balance).to.equal(15)
-          expect(ending.bob.balance).to.equal(0)
-          expect(ending.charlie.balance).to.equal(5)
-          return
-        }).then(done).catch(done)
-      })
-
-      contractIt('should fire a Transfer event when a transfer is sucessful', (done) => {
-        let starting
-
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          starting = users
-          return token.mint(starting.alice.address, 20)
-        }).then(() => {
-          return //firstEvent(token.Transfer())
-        }).then(() => {
-          return token.transfer(starting.bob.address, 5, {from: starting.alice.address})
-        }).then(() => {
-          return firstEvent(token.Transfer())
-        }).then((log) => {
           expect(log.args.from).to.equal(starting.alice.address)
           expect(log.args.to).to.equal(starting.bob.address)
           expect(log.args.value.toNumber()).to.equal(5)
-          done()
-          return
-        }).catch(done)
-      })
+        })
 
-      contractShouldThrow("should throw if sender does not have enough tokens", async () => {
-        var users = await getUsers(token)
-        return token.transfer(users.alice.address, 10, {from: users.bob.address})
-      })
+        contractShouldThrow("should throw if sender does not have enough tokens", async () => {
+          var users = await getUsers(token)
+          return token.transfer(users.alice.address, 10, {from: users.bob.address})
+        })
 
 
-      contractShouldThrow('should throw if a the send value is a negative number', async (done) => {
-        var users = await getUsers(token)
-        return token.transfer(users.alice.address, -1, {from: users.bob.address})
+        contractShouldThrow('should throw if a the send value is a negative number', async (done) => {
+          var users = await getUsers(token)
+          return token.transfer(users.alice.address, -1, {from: users.bob.address})
+        })
       })
     })
 
@@ -246,145 +199,145 @@ contract('HoloToken', (accounts) => {
         return token.transferFrom(accounts[1], accounts[2], 3, {value: 1})
       })
 
-      //contractShouldThrowIfClosed(() => {
-      //  return token.transferFrom(accounts[0], accounts[1], 1)
-      //})
+      contractShouldThrow('should throw if minting was not finished', () => {
+        return token.transferFrom(accounts[0], accounts[1], 1)
+      })
 
-      contractIt('spender can spend within allowance set by manager', (done) => {
-        let manager, spender, recipient
+      describe('after minting', () => {
+        beforeEach(async () => {
+          let starting = await getUsers(token)
+          await token.mint(starting.manager.address, 200)
+          await token.finishMinting()
+        })
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
+        contractIt('spender can spend within allowance set by manager', (done) => {
+          let manager, spender, recipient
+
+          Promise.resolve().then(() => {
+            return getUsers(token)
+          }).then((users) => {
+            manager = users.manager.address
+            spender = users.spender.address
+            recipient = users.recipient.address
+            return token.approve(spender, 100, {from: manager})
+          }).then(() => {
+            return token.transferFrom(manager, recipient, 40, {from: spender})
+          }).then(() => {
+            return getUsers(token)
+          }).then((ending) => {
+            expect(ending.manager.balance).to.equal(160)
+            expect(ending.spender.balance).to.equal(0)
+            expect(ending.recipient.balance).to.equal(40)
+            return
+          }).then(() => {
+            return token.allowance.call(manager, spender, {from: anyone})
+          }).then((allowance) => {
+            expect(allowance.toNumber()).to.equal(60)
+            return
+          }).then(done).catch(done)
+        })
+
+        contractShouldThrow('spender cannot spend without allowance set by manager', async (done) => {
+          let manager, spender, recipient
+          let users = await getUsers(token)
+
           manager = users.manager.address
           spender = users.spender.address
           recipient = users.recipient.address
-          return token.mint(manager, 200)
-        }).then(() => {
-          return token.approve(spender, 100, {from: manager})
-        }).then(() => {
-          return token.transferFrom(manager, recipient, 40, {from: spender})
-        }).then(() => {
-          return getUsers(token)
-        }).then((ending) => {
-          expect(ending.manager.balance).to.equal(160)
-          expect(ending.spender.balance).to.equal(0)
-          expect(ending.recipient.balance).to.equal(40)
+          await token.transferFrom(manager, recipient, 40, {from: spender})
+          assert(false)
           return
-        }).then(() => {
-          return token.allowance.call(manager, spender, {from: anyone})
-        }).then((allowance) => {
-          expect(allowance.toNumber()).to.equal(60)
-          return
-        }).then(done).catch(done)
-      })
+        })
 
-      contractShouldThrow('spender cannot spend without allowance set by manager', async (done) => {
-        let manager, spender, recipient
-        let users = await getUsers(token)
+        contractIt('should fire a Transfer event when a transfer is sucessful', (done) => {
+          let manager, spender, recipient
 
-        manager = users.manager.address
-        spender = users.spender.address
-        recipient = users.recipient.address
-        await token.mint(manager, 200)
-        await token.transferFrom(manager, recipient, 40, {from: spender})
-        assert(false)
-        return
-      })
+          Promise.resolve().then(() => {
+            return getUsers(token)
+          }).then((users) => {
+            manager = users.manager.address
+            spender = users.spender.address
+            recipient = users.recipient.address
+            return token.approve(spender, 100, {from: manager})
+          }).then(() => {
+            return token.transferFrom(manager, recipient, 50, {from: spender})
+          }).then(() => {
+            return firstEvent(token.Transfer())
+          }).then((log) => {
+            expect(log.args.from).to.equal(manager)
+            expect(log.args.to).to.equal(recipient)
+            expect(log.args.value.toNumber()).to.equal(50)
+            done()
+            return
+          }).catch(done)
+        })
+  /*
+        contractIt('should fire a TransferFrom event when a transfer is sucessful', (done) => {
+          let manager, spender, recipient
 
-      contractIt('should fire a Transfer event when a transfer is sucessful', (done) => {
-        let manager, spender, recipient
+          Promise.resolve().then(() => {
+            return getUsers(token)
+          }).then((users) => {
+            manager = users.manager.address
+            spender = users.spender.address
+            recipient = users.recipient.address
+            return token.mint(manager, 200)
+          }).then(() => {
+            return //firstEvent(token.Transfer())
+          }).then(() => {
+            return token.approve(spender, 100, {from: manager})
+          }).then(() => {
+            return token.transferFrom(manager, recipient, 50, {from: spender})
+          }).then(() => {
+            return firstEvent(token.TransferFrom())
+          }).then((log) => {
+            expect(log.args.from).to.equal(manager)
+            expect(log.args.to).to.equal(recipient)
+            // FAILS INTERMITTENTLY, CAUSE UNKNOWN:
+            // expect(log.args._spender).to.equal(spender)
+            expect(log.args.value.toNumber()).to.equal(50)
+            done()
+            return
+          }).catch(done)
+        })
+  */
+        contractShouldThrow('spender cannot spend more than allowance set by manager', async (done) => {
+          let manager, spender, recipient
+          let users = await getUsers(token)
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
           manager = users.manager.address
           spender = users.spender.address
           recipient = users.recipient.address
-          return token.mint(manager, 200)
-        }).then(() => {
-          return token.approve(spender, 100, {from: manager})
-        }).then(() => {
-          return token.transferFrom(manager, recipient, 50, {from: spender})
-        }).then(() => {
-          return firstEvent(token.Transfer())
-        }).then((log) => {
-          expect(log.args.from).to.equal(manager)
-          expect(log.args.to).to.equal(recipient)
-          expect(log.args.value.toNumber()).to.equal(50)
-          done()
+          await token.approve(spender, 100, {from: manager})
+          await token.transferFrom(manager, recipient, 101, {from: spender})
+          assert(false)
           return
-        }).catch(done)
-      })
-/*
-      contractIt('should fire a TransferFrom event when a transfer is sucessful', (done) => {
-        let manager, spender, recipient
+        })
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
+        contractShouldThrow('spender cannot spend more than current balance of manager', async (done) => {
+          let manager, spender, recipient
+          let users = await getUsers(token)
+
           manager = users.manager.address
           spender = users.spender.address
           recipient = users.recipient.address
-          return token.mint(manager, 200)
-        }).then(() => {
-          return //firstEvent(token.Transfer())
-        }).then(() => {
-          return token.approve(spender, 100, {from: manager})
-        }).then(() => {
-          return token.transferFrom(manager, recipient, 50, {from: spender})
-        }).then(() => {
-          return firstEvent(token.TransferFrom())
-        }).then((log) => {
-          expect(log.args.from).to.equal(manager)
-          expect(log.args.to).to.equal(recipient)
-          // FAILS INTERMITTENTLY, CAUSE UNKNOWN:
-          // expect(log.args._spender).to.equal(spender)
-          expect(log.args.value.toNumber()).to.equal(50)
-          done()
-          return
-        }).catch(done)
-      })
-*/
-      contractShouldThrow('spender cannot spend more than allowance set by manager', async (done) => {
-        let manager, spender, recipient
-        let users = await getUsers(token)
+          await token.approve(spender, 300, {from: manager})
+          await token.transferFrom(manager, recipient, 250, {from: spender})
+          assert(false)
+        })
 
-        manager = users.manager.address
-        spender = users.spender.address
-        recipient = users.recipient.address
-        await token.mint(manager, 200)
-        await token.approve(spender, 100, {from: manager})
-        await token.transferFrom(manager, recipient, 101, {from: spender})
-        assert(false)
-        return
-      })
+        contractShouldThrow('spender cannot send a negative token amount', async (done) => {
+          let manager, spender, recipient
+          let users = await getUsers(token)
 
-      contractShouldThrow('spender cannot spend more than current balance of manager', async (done) => {
-        let manager, spender, recipient
-        let users = await getUsers(token)
+          manager = users.manager.address
+          spender = users.spender.address
+          recipient = users.recipient.address
+          await token.approve(spender, 300, {from: manager})
+          await token.transferFrom(manager, recipient, -1, {from: spender})
+          assert(false)
 
-        manager = users.manager.address
-        spender = users.spender.address
-        recipient = users.recipient.address
-        await token.mint(manager, 100)
-        await token.approve(spender, 300, {from: manager})
-        await token.transferFrom(manager, recipient, 200, {from: spender})
-        assert(false)
-      })
-
-      contractShouldThrow('spender cannot send a negative token amount', async (done) => {
-        let manager, spender, recipient
-        let users = await getUsers(token)
-
-        manager = users.manager.address
-        spender = users.spender.address
-        recipient = users.recipient.address
-        await token.mint(manager, 100)
-        await token.approve(spender, 300, {from: manager})
-        await token.transferFrom(manager, recipient, -1, {from: spender})
-        assert(false)
-
+        })
       })
     })
 
@@ -393,46 +346,57 @@ contract('HoloToken', (accounts) => {
         return token.approve(accounts[1], 100, {value: 1})
       })
 
-      //contractShouldThrowIfClosed(() => {
-      //  return token.approve(accounts[0], 1)
-      //})
-
-      contractIt('manager can approve allowance for spender to spend', (done) => {
-        let manager, spender
-
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          manager = users.alice.address
-          spender = users.bob.address
-          return token.approve(spender, 100, {from: manager})
-        }).then(() => {
-          return token.allowance.call(manager, spender, {from: anyone})
-        }).then((allowance) => {
-          expect(allowance.toNumber()).to.equal(100)
-          return
-        }).then(done).catch(done)
+      contractShouldThrow('should throw if minting was not finished', async () => {
+        let users = await getUsers(token)
+        let manager = users.alice.address
+        let spender = users.bob.address
+        return token.approve(spender, 100, {from: manager})
       })
 
-      contractIt('should fire an Approval event when a tranfer is sucessful', (done) => {
-        let events = token.Approval()
-        let manager, spender
+      describe('after minting', () => {
+        beforeEach(async () => {
+          let starting = await getUsers(token)
+          await token.mint(starting.manager.address, 200)
+          await token.finishMinting()
+        })
 
-        Promise.resolve().then(() => {
-          return getUsers(token)
-        }).then((users) => {
-          manager = users.manager.address
-          spender = users.spender.address
-          return token.approve(spender, 50, {from: manager})
-        }).then(() => {
-          return firstEvent(events)
-        }).then((log) => {
-          expect(log.args.owner).to.equal(manager)
-          expect(log.args.spender).to.equal(spender)
-          expect(log.args.value.toNumber()).to.equal(50)
-          done()
-          return
-        }).catch(done)
+        contractIt('manager can approve allowance for spender to spend', (done) => {
+          let manager, spender
+
+          Promise.resolve().then(() => {
+            return getUsers(token)
+          }).then((users) => {
+            manager = users.alice.address
+            spender = users.bob.address
+            return token.approve(spender, 100, {from: manager})
+          }).then(() => {
+            return token.allowance.call(manager, spender, {from: anyone})
+          }).then((allowance) => {
+            expect(allowance.toNumber()).to.equal(100)
+            return
+          }).then(done).catch(done)
+        })
+
+        contractIt('should fire an Approval event when a tranfer is sucessful', (done) => {
+          let events = token.Approval()
+          let manager, spender
+
+          Promise.resolve().then(() => {
+            return getUsers(token)
+          }).then((users) => {
+            manager = users.manager.address
+            spender = users.spender.address
+            return token.approve(spender, 50, {from: manager})
+          }).then(() => {
+            return firstEvent(events)
+          }).then((log) => {
+            expect(log.args.owner).to.equal(manager)
+            expect(log.args.spender).to.equal(spender)
+            expect(log.args.value.toNumber()).to.equal(50)
+            done()
+            return
+          }).catch(done)
+        })
       })
     })
 
