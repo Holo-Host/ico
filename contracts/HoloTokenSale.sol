@@ -7,9 +7,9 @@ contract HoloTokenSale is Ownable{
   using SafeMath for uint256;
 
   // The token being sold
-  HoloToken public token;
+  HoloToken public tokenContract;
   address private updater;
-  HoloTokenSupply private supply_contract;
+  HoloTokenSupply private supplyContract;
 
   // start and end block where purchases are allowed (both inclusive)
   uint256 public startBlock;
@@ -42,18 +42,10 @@ contract HoloTokenSale is Ownable{
     require(_wallet != 0x0);
 
     updater = msg.sender;
-    token = createTokenContract();
     startBlock = _startBlock;
     endBlock = _endBlock;
     rate = _rate;
     wallet = _wallet;
-  }
-
-  function createTokenContract() internal returns (HoloToken) {
-    HoloToken t = new HoloToken();
-    //token.pause();
-    t.setMinter(this);
-    return t;
   }
 
   function setUpdater(address u) onlyOwner {
@@ -61,7 +53,11 @@ contract HoloTokenSale is Ownable{
   }
 
   function setSupplyContract(HoloTokenSupply s) onlyOwner {
-    supply_contract = s;
+    supplyContract = s;
+  }
+
+  function setTokenContract(HoloToken t) onlyOwner {
+    tokenContract = t;
   }
 
 
@@ -112,7 +108,7 @@ contract HoloTokenSale is Ownable{
   }
 
   function update() onlyUpdater {
-    uint256 unsoldTokens = supply_contract.total_supply() - token.totalSupply();
+    uint256 unsoldTokens = supplyContract.total_supply() - tokenContract.totalSupply();
     address beneficiary;
     uint256 weiToSpent;
     uint256 totalWeiConverted = 0;
@@ -148,7 +144,7 @@ contract HoloTokenSale is Ownable{
     uint256 amountOfHolos = holosForWei(amountWei);
     escrow[beneficiary] = escrow[beneficiary].sub(amountWei);
     demand = demand.sub(amountOfHolos);
-    token.mint(beneficiary, amountOfHolos);
+    tokenContract.mint(beneficiary, amountOfHolos);
   }
 
   // @return true if the transaction can buy tokens

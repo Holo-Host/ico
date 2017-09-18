@@ -26,10 +26,11 @@ contract('HoloTokenSale', (accounts) => {
   beforeEach(async () => {
     sale = await HoloTokenSale.new(web3.eth.blockNumber + 10, 1000, 1, wallet)
     supply_contract = await HoloTokenSupply.new()
+    token = await HoloToken.new()
+    await token.setMinter(sale.address)
     await sale.setSupplyContract(supply_contract.address)
+    await sale.setTokenContract(token.address)
     await sale.setUpdater(updater)
-    token = await sale.token()
-    token = await HoloToken.at(token)
   })
 
   describe('buyTokens', () => {
