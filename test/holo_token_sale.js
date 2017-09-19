@@ -24,7 +24,7 @@ contract('HoloTokenSale', (accounts) => {
   let token
 
   beforeEach(async () => {
-    sale = await HoloTokenSale.new(web3.eth.blockNumber + 10, 1000, 1, wallet)
+    sale = await HoloTokenSale.new(web3.eth.blockNumber + 10, 1000, 1000000000000000000, wallet)
     supply_contract = await HoloTokenSupply.new()
     token = await HoloToken.new()
     await token.setMinter(sale.address)
@@ -33,9 +33,9 @@ contract('HoloTokenSale', (accounts) => {
     await sale.setUpdater(updater)
   })
 
-  describe('buyTokens', () => {
+  describe('addAsk', () => {
     contractShouldThrow('should throw if called before ICO started', async () => {
-        return sale.buyTokens(tokenBuyer1, {value: 100, from: tokenBuyer1})
+        return sale.addAsk(tokenBuyer1, {value: 100, from: tokenBuyer1})
     })
 
     describe('after starting block', () => {
@@ -61,8 +61,8 @@ contract('HoloTokenSale', (accounts) => {
         let log = await firstEvent(sale.AskAdded())
         expect(log.args.purchaser).to.equal(tokenBuyer1)
         expect(log.args.beneficiary).to.equal(tokenBuyer1)
-        expect(log.args.value.toString()).to.equal(twoEther)
-        expect(log.args.amount.toString()).to.equal(web3.toWei(2, 'ether'))
+        expect(log.args.amountWei.toString()).to.equal(twoEther)
+        expect(log.args.amountHolos.toString()).to.equal(web3.toWei(2, 'ether'))
         let escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
         expect(escrowOfBuyer1.toString()).to.equal(twoEther)
         let beneficiaries = await sale.beneficiaries(0)
@@ -79,8 +79,8 @@ contract('HoloTokenSale', (accounts) => {
         log = await firstEvent(sale.AskAdded())
         expect(log.args.purchaser).to.equal(tokenBuyer2)
         expect(log.args.beneficiary).to.equal(tokenBuyer2)
-        expect(log.args.value.toString()).to.equal(twoEther)
-        expect(log.args.amount.toString()).to.equal(web3.toWei(2, 'ether'))
+        expect(log.args.amountWei.toString()).to.equal(twoEther)
+        expect(log.args.amountHolos.toString()).to.equal(web3.toWei(2, 'ether'))
         escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
         let escrowOfBuyer2 = await sale.inEscrowFor.call(tokenBuyer2)
         beneficiaries = await sale.beneficiaries(1)
@@ -94,9 +94,9 @@ contract('HoloTokenSale', (accounts) => {
 
       describe('after three token purchases', () => {
         beforeEach(async () => {
-          await sale.buyTokens(tokenBuyer1, {value: web3.toWei(2, 'ether'), from: tokenBuyer1})
-          await sale.buyTokens(tokenBuyer2, {value: web3.toWei(5, 'ether'), from: tokenBuyer2})
-          await sale.buyTokens(tokenBuyer3, {value: web3.toWei(1, 'ether'), from: tokenBuyer3})
+          await sale.addAsk(tokenBuyer1, {value: web3.toWei(2, 'ether'), from: tokenBuyer1})
+          await sale.addAsk(tokenBuyer2, {value: web3.toWei(5, 'ether'), from: tokenBuyer2})
+          await sale.addAsk(tokenBuyer3, {value: web3.toWei(1, 'ether'), from: tokenBuyer3})
         })
 
         it('should have 3 beneficiaries asks', async () => {
@@ -109,8 +109,8 @@ contract('HoloTokenSale', (accounts) => {
           expect(demand.toString()).to.equal(web3.toWei(8, 'ether'))
         })
 
-        it('buyTokens should not add a beneficiary to the list of beneficiaries twice', async () => {
-          await sale.buyTokens(tokenBuyer1, {value: web3.toWei(2, 'ether'), from: tokenBuyer1})
+        it('addAsk should not add a beneficiary to the list of beneficiaries twice', async () => {
+          await sale.addAsk(tokenBuyer1, {value: web3.toWei(2, 'ether'), from: tokenBuyer1})
           let beneficiariesLength = await sale.beneficiariesLength.call()
           expect(beneficiariesLength.toNumber()).to.equal(3)
         })
@@ -156,8 +156,8 @@ contract('HoloTokenSale', (accounts) => {
           })
 
           it('should delete the caller from the beneficiaries list even if they send tokens multiple times', async () => {
-            await sale.buyTokens(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
-            await sale.buyTokens(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
+            await sale.addAsk(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
+            await sale.addAsk(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
             let countBefore = await sale.beneficiariesLength.call()
             await sale.withdraw({from: tokenBuyer1})
             let countAfter = await sale.beneficiariesLength.call()
@@ -272,9 +272,9 @@ contract('HoloTokenSale', (accounts) => {
             beforeEach(async () => {
               await supply_contract.addTokens(web3.toWei(2, 'ether'))
               assert(await supply_contract.total_supply() == 12000000000000000000)
-              await sale.buyTokens(tokenBuyer4, {value: web3.toWei(2, 'ether'), from: tokenBuyer4})
-              await sale.buyTokens(tokenBuyer5, {value: web3.toWei(5, 'ether'), from: tokenBuyer5})
-              await sale.buyTokens(tokenBuyer6, {value: web3.toWei(1, 'ether'), from: tokenBuyer6})
+              await sale.addAsk(tokenBuyer4, {value: web3.toWei(2, 'ether'), from: tokenBuyer4})
+              await sale.addAsk(tokenBuyer5, {value: web3.toWei(5, 'ether'), from: tokenBuyer5})
+              await sale.addAsk(tokenBuyer6, {value: web3.toWei(1, 'ether'), from: tokenBuyer6})
 
               let demand = await sale.demand()
               assert(demand == 8000000000000000000)
