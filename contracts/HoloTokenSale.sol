@@ -6,23 +6,35 @@ import "./HoloTokenSupply.sol";
 contract HoloTokenSale is Ownable{
   using SafeMath for uint256;
 
-  // The token being sold
-  HoloToken public tokenContract;
-  address private updater;
-  HoloTokenSupply private supplyContract;
-
   // start and end block where purchases are allowed (both inclusive)
   uint256 public startBlock;
   uint256 public endBlock;
-
-  // address where funds are collected
-  address public wallet;
-
   // how many token units a buyer gets per wei
   uint256 public rate;
+  // address where funds are being send to on successful buy
+  address public wallet;
 
+  // The token being sold
+  HoloToken public tokenContract;
+  // The contract to read amount of available tokens from
+  HoloTokenSupply private supplyContract;
+
+  // The account that is allowed to call update()
+  // which will happen once per day during the active period
+  address private updater;
+
+  // Until update() runs and actually mints tokens for the sent ETH
+  // (and also after that if the demand could not be met)
+  // the money stays in escrow in this contract.
+  // This mapping holds how many wei each buyer has in escrow waiting
+  // to be spent for Holos.
   mapping(address => uint256) public escrow;
+
+  // This is a list of everybody who has ETH in escrow and needs to be taken
+  // into account on the next update.
   address[] public beneficiaries;
+  // This is the accumulated total demand (of today) which corresponds to
+  // all the ETH in escrow
   uint256 public demand;
 
   event AskAdded(address purchaser, address beneficiary, uint256 value, uint256 amount);
@@ -70,7 +82,7 @@ contract HoloTokenSale is Ownable{
     require(beneficiary != 0x0);
     require(validPurchase());
 
-    if( !escrow[beneficiary] > 0 ) {
+    if( !(escrow[beneficiary] > 0) ) {
       beneficiaries.push(beneficiary);
     }
 
