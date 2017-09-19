@@ -109,6 +109,12 @@ contract('HoloTokenSale', (accounts) => {
           expect(demand.toString()).to.equal(web3.toWei(8, 'ether'))
         })
 
+        it('buyTokens should not add a beneficiary to the list of beneficiaries twice', async () => {
+          await sale.buyTokens(tokenBuyer1, {value: web3.toWei(2, 'ether'), from: tokenBuyer1})
+          let beneficiariesLength = await sale.beneficiariesLength.call()
+          expect(beneficiariesLength.toNumber()).to.equal(3)
+        })
+
         describe('withdraw', () => {
           it('should send back the deposited ether', async () => {
             let gasCost = 3766299999993900;
@@ -136,6 +142,39 @@ contract('HoloTokenSale', (accounts) => {
             after = await web3.eth.getBalance(tokenBuyer3)
             differenceWei = (after.toNumber() - before.toNumber())
             expect(differenceWei + gasCost + 100000).to.be.at.least(1000000000000000000)
+          })
+
+          it('should delete the caller from the beneficiaries list', async () => {
+            let countBefore = await sale.beneficiariesLength.call()
+            await sale.withdraw({from: tokenBuyer1})
+            let countAfter = await sale.beneficiariesLength.call()
+            expect(countBefore - countAfter).to.equal(1)
+            for(let i=0; i<countAfter; i++) {
+              let b = sale.beneficiaries.call(i)
+              expect(b).to.not.equal(tokenBuyer1)
+            }
+          })
+
+          it('should delete the caller from the beneficiaries list even if they send tokens multiple times', async () => {
+            await sale.buyTokens(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
+            await sale.buyTokens(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
+            let countBefore = await sale.beneficiariesLength.call()
+            await sale.withdraw({from: tokenBuyer1})
+            let countAfter = await sale.beneficiariesLength.call()
+            expect(countBefore - countAfter).to.equal(1)
+            for(let i=0; i<countAfter; i++) {
+              let b = await sale.beneficiaries.call(i)
+              expect(b).to.not.equal(tokenBuyer1)
+            }
+          })
+
+          it('should reduce the sale contracts balance by the amount that was in escrow', async () => {
+            let before = await web3.eth.getBalance(sale.address)
+            let escrow = await sale.inEscrowFor.call(tokenBuyer2)
+            expect(escrow.toString()).to.equal(web3.toWei(5, 'ether'))
+            await sale.withdraw({from: tokenBuyer2})
+            let after = await web3.eth.getBalance(sale.address)
+            expect(after.toNumber()).to.equal(before.toNumber() - escrow.toNumber())
           })
         })
 

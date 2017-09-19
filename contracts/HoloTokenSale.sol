@@ -70,11 +70,15 @@ contract HoloTokenSale is Ownable{
     require(beneficiary != 0x0);
     require(validPurchase());
 
+    if( !escrow[beneficiary] > 0 ) {
+      beneficiaries.push(beneficiary);
+    }
+
     uint256 weiAmount = msg.value;
     escrow[beneficiary] = escrow[beneficiary].add(weiAmount);
     uint256 amountOfHolosAsked = holosForWei(weiAmount);
     demand = demand.add(amountOfHolosAsked);
-    beneficiaries.push(beneficiary);
+
     AskAdded(msg.sender, beneficiary, weiAmount, amountOfHolosAsked);
   }
 
@@ -99,10 +103,10 @@ contract HoloTokenSale is Ownable{
     for(uint i=0; i<beneficiaries.length; i++) {
       if(beneficiaries[i] == beneficiary) {
         beneficiaries[i] = beneficiaries[beneficiaries.length-1];
+        delete beneficiaries[beneficiaries.length-1];
+        beneficiaries.length -= 1;
       }
     }
-    delete beneficiaries[beneficiaries.length-1];
-    beneficiaries.length -= 1;
     beneficiary.transfer(depositedValue);
     Withdrawn(beneficiary, depositedValue);
   }
