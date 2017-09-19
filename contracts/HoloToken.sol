@@ -2,8 +2,20 @@ pragma solidity ^0.4.15;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 
+// This is an ERC-20 token contract based on Open Zepplin's StandardToken
+// and MintableToken plus the ability to burn tokens.
+//
+// We had to copy over the code instead of inheriting because of changes
+// to the modifier lists of some functions:
+//   * transfer(), transferFrom() and approve() are not callable during
+//     the minting period, only after MintingFinished()
+//   * mint() can only be called by the minter who is not the owner
+//     but the HoloTokenSale contract.
+//
+// Token can be burned by a special 'destroyer' role that can only
+// burn its tokens.
 contract HoloToken is Ownable {
-  string public constant name = "Holo Token";
+  string public constant name = "Holo Fuel Certificates";
   string public constant symbol = "HOLO";
   uint8 public constant decimals = 18;
 
@@ -128,7 +140,7 @@ contract HoloToken is Ownable {
 
   function mint(address _to, uint256 _amount) onlyMinter canMint  returns (bool) {
     require(balances[_to] + _amount > balances[_to]); // Guard against overflow
-    require(totalSupply + _amount > totalSupply); // Guard against overflow  (this should never happen)
+    require(totalSupply + _amount > totalSupply);     // Guard against overflow  (this should never happen)
     totalSupply = totalSupply.add(_amount);
     balances[_to] = balances[_to].add(_amount);
     Mint(_to, _amount);
