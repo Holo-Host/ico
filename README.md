@@ -82,11 +82,7 @@ And then cd into the repository and install all other dependencies with:
 
 ### Running the tests
 
-Open another shell window and start testrpc there with:
-
-```testrpc```
-
-Leave it running.
+Open another shell window and start testrpc there with ```testrpc``` and leave it running.
 
 Now from the repository's directory you should be able to deploy the contracts
 on testrpc's testing blockchain by running:
