@@ -117,7 +117,7 @@ contract('HoloToken', (accounts) => {
         Promise.resolve().then(() => {
           return token.name.call()
         }).then((name) => {
-          expect(name).to.equal('Holo Token')
+          expect(name).to.equal('Holo Fuel Certificates')
           return
         }).then(done).catch(done)
       })
