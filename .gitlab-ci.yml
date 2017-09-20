@@ -1,0 +1,9 @@
+image: node:8
+
+before_script:
+  - npm install -g truffle ethereumjs-testrpc
+  - npm install
+
+test:
+  script:
+    - truffle test
