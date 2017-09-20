@@ -6,6 +6,9 @@ before_script:
 
 test:
   script:
-    - testrpc &
+    - testrpc > testrpc_output.txt &
     - sleep 3
     - truffle test
+  artifacts:
+    paths:
+      - testrpc_output.txt
