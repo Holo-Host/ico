@@ -65,7 +65,7 @@ contract('HoloTokenSale', (accounts) => {
         expect(log.args.amountHolos.toString()).to.equal(web3.toWei(2, 'ether'))
         let escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
         expect(escrowOfBuyer1.toString()).to.equal(twoEther)
-        let beneficiaries = await sale.beneficiaries(0)
+        let beneficiaries = await sale.beneficiaries("0x0")
         expect(beneficiaries).to.equal(tokenBuyer1)
         demand = await sale.demand()
         expect(demand.toString()).to.equal(web3.toWei(2, 'ether'))
@@ -83,7 +83,7 @@ contract('HoloTokenSale', (accounts) => {
         expect(log.args.amountHolos.toString()).to.equal(web3.toWei(2, 'ether'))
         escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
         let escrowOfBuyer2 = await sale.inEscrowFor.call(tokenBuyer2)
-        beneficiaries = await sale.beneficiaries(1)
+        beneficiaries = await sale.beneficiaries("0x0")
         demand = await sale.demand()
 
         expect(escrowOfBuyer1.toString()).to.equal(twoEther)
@@ -226,7 +226,9 @@ contract('HoloTokenSale', (accounts) => {
 
             walletBalanceBefore = web3.eth.getBalance(wallet)
 
+            await sale.beginUpdate({from: updater})
             await sale.update({from: updater})
+            await sale.finishUpdate({from: updater})
           })
 
           it('should have minted the tokens for everybody', async () => {
@@ -281,7 +283,9 @@ contract('HoloTokenSale', (accounts) => {
 
               walletBalanceBefore = web3.eth.getBalance(wallet)
 
+              await sale.beginUpdate({from: updater})
               await sale.update({from: updater})
+              await sale.finishUpdate({from: updater})
             })
 
             it('should have minted half of the asked tokens', async () => {
@@ -333,7 +337,9 @@ contract('HoloTokenSale', (accounts) => {
 
                 walletBalanceBefore = web3.eth.getBalance(wallet)
 
+                await sale.beginUpdate({from: updater})
                 await sale.update({from: updater})
+                await sale.finishUpdate({from: updater})
               })
 
               it('should have minted 2/3 of the asked tokens', async () => {

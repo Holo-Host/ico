@@ -46,14 +46,35 @@ contract HoloTokenSale is Ownable{
   // the money stays in escrow in this contract.
   // This mapping holds how many wei each buyer has in escrow waiting
   // to be spent for Holos.
-  mapping(address => uint256) public escrow;
+  //mapping(address => uint256) public escrow;
 
   // This is a list of everybody who has ETH in escrow and needs to be taken
   // into account on the next update.
-  address[] public beneficiaries;
+  //address[] public beneficiaries;
+  mapping(address => address) public beneficiaries;
+  uint public beneficiariesCount;
   // This is the accumulated total demand (of today) which corresponds to
   // all the ETH in escrow
   uint256 public demand;
+
+  struct Ask {
+    uint256 amountWei;
+    uint timestamp;
+  }
+
+  mapping(address => Ask[]) public asksByBeneficiary;
+
+  bool isUpdating;
+  struct UpdateSnapshot {
+    uint timestamp;
+    address nextBeneficiary;
+    address lastBeneficiary;
+    uint256 todaysAskScaling;
+  }
+
+  UpdateSnapshot public updateSnapshot;
+
+  uint256 todaysUnsoldTokens = 0;
 
   event AskAdded(address purchaser, address beneficiary, uint256 amountWei, uint256 amountHolos);
   event Withdrawn(address beneficiary, uint256 amountWei);
@@ -62,6 +83,16 @@ contract HoloTokenSale is Ownable{
 
   modifier onlyUpdater {
     require(msg.sender == updater);
+    _;
+  }
+
+  modifier onlyDuringUpdate {
+    require(isUpdating);
+    _;
+  }
+
+  modifier notDuringUpdate {
+    require(!isUpdating);
     _;
   }
 
@@ -108,11 +139,16 @@ contract HoloTokenSale is Ownable{
   }
 
   function inEscrowFor(address beneficiary) returns (uint256){
-    return escrow[beneficiary];
+    uint256 sumOfAsks;
+    for( uint i=0; i<asksByBeneficiary[beneficiary].length; i++) {
+      uint256 amount = asksByBeneficiary[beneficiary][i].amountWei;
+      sumOfAsks = sumOfAsks.add(amount);
+    }
+    return sumOfAsks;
   }
 
   function beneficiariesLength() public constant returns (uint) {
-    return beneficiaries.length;
+    return beneficiariesCount;
   }
 
   //---------------------------------------------------------------------------
@@ -134,20 +170,22 @@ contract HoloTokenSale is Ownable{
     require(beneficiary != 0x0);
     require(validPurchase());
 
-    if( !(escrow[beneficiary] > 0) ) {
+    if( asksByBeneficiary[beneficiary].length == 0) {
       // List of all beneficiaries with money in escrow.
-      // If beneficiary already has ETH in escrow they must be in
+      // If beneficiary already has asks and ETH in escrow they must be in
       // in the list already which is why we don't add them again.
-      beneficiaries.push(beneficiary);
+      beneficiaries[beneficiary] = beneficiaries[0x0];
+      beneficiaries[0x0] = beneficiary;
+      beneficiariesCount += 1;
     }
 
-    uint256 weiAmount = msg.value;
-    escrow[beneficiary] = escrow[beneficiary].add(weiAmount);
-    uint256 amountOfHolosAsked = holosForWei(weiAmount);
+    asksByBeneficiary[beneficiary].push(Ask(msg.value, now));
+
+    uint256 amountOfHolosAsked = holosForWei(msg.value);
     // demand tracks the daily demand
     demand = demand.add(amountOfHolosAsked);
 
-    AskAdded(msg.sender, beneficiary, weiAmount, amountOfHolosAsked);
+    AskAdded(msg.sender, beneficiary, msg.value, amountOfHolosAsked);
   }
 
   // Returns true if the transaction can buy tokens
@@ -174,33 +212,64 @@ contract HoloTokenSale is Ownable{
   }
 
   function withdrawInternal(address beneficiary) internal {
-    require(escrow[beneficiary] > 0);
-    uint256 depositedValue = escrow[beneficiary];
+    require(asksByBeneficiary[beneficiary].length > 0);
 
-    // We set their escrow to 0
-    escrow[beneficiary] = 0;
-    // and reduce the demand for today by the number Holos that could
-    // have bought.
-    demand = demand.sub(holosForWei(depositedValue));
-
-    // Then we need to groom the beneficiaries list by removing this one.
-    for(uint i=0; i<beneficiaries.length; i++) {
-      if(beneficiaries[i] == beneficiary) {
-        beneficiaries[i] = beneficiaries[beneficiaries.length-1];
-        delete beneficiaries[beneficiaries.length-1];
-        beneficiaries.length -= 1;
+    uint256 withdrawableAmount;
+    bool unwithdrawableLeft = false;
+    for( uint i=0; i<asksByBeneficiary[beneficiary].length; i++) {
+      if(asksByBeneficiary[beneficiary][i].timestamp > updateSnapshot.timestamp || !isUpdating) {
+        uint256 amount = asksByBeneficiary[beneficiary][i].amountWei;
+        withdrawableAmount = withdrawableAmount.add(amount);
+        demand.sub(holosForWei(amount));
+        asksByBeneficiary[beneficiary][i].amountWei = 0;
+      } else {
+        unwithdrawableLeft = true;
       }
     }
 
+    if( !unwithdrawableLeft ) {
+      // Then we need to groom the beneficiaries list by removing this one.
+      address parent;
+      // Warning: unbounded gas loop
+      while (beneficiaries[parent] != beneficiary) parent = beneficiaries[parent];
+
+      beneficiaries[parent] = beneficiaries[ beneficiaries[parent]];
+      delete asksByBeneficiary[beneficiary];
+      beneficiariesCount -= 1;
+    }
+
     // Finally, we transfer the ETH
-    beneficiary.transfer(depositedValue);
-    Withdrawn(beneficiary, depositedValue);
+    beneficiary.transfer(withdrawableAmount);
+    Withdrawn(beneficiary, withdrawableAmount);
   }
 
 
   //---------------------------------------------------------------------------
   // Update
   //---------------------------------------------------------------------------
+
+  function beginUpdate() onlyUpdater notDuringUpdate{
+    updateSnapshot.timestamp = now;
+    updateSnapshot.nextBeneficiary = beneficiaries[0x0];
+    updateSnapshot.lastBeneficiary = 0x0;
+    // unsoldTokens is the amount of tokens (*10^18) that we can sell today
+    uint256 unsoldTokens = supplyContract.total_supply() - tokenContract.totalSupply();
+    if( demand > unsoldTokens ) {
+        updateSnapshot.todaysAskScaling = unsoldTokens * 10000000000000000000000 / demand;
+    } else {
+      updateSnapshot.todaysAskScaling = 10000000000000000000000;
+    }
+
+    isUpdating = true;
+  }
+
+  function finishUpdate() onlyUpdater onlyDuringUpdate{
+    isUpdating = false;
+  }
+
+  function scaled(uint256 x) private returns (uint256) {
+    return x * updateSnapshot.todaysAskScaling / 10000000000000000000000;
+  }
 
   // This function will be called by us once per day
   // (after updating the supply contract with data from the crowdfund).
@@ -209,39 +278,42 @@ contract HoloTokenSale is Ownable{
   // If we have more tokens then demand, everybody will get what they asked for.
   // If we don't have enough tokens to meet the demand we scale everybodys share
   // with the overall ratio between demand and supply.
-  function update() onlyUpdater {
-    // unsoldTokens is the amount of tokens (*10^18) that we can sell today
-    uint256 unsoldTokens = supplyContract.total_supply() - tokenContract.totalSupply();
+  function update() onlyUpdater onlyDuringUpdate {
+
     // Here we accumulate the amount of wei that were exchanged today
     uint256 totalWeiExchanged = 0;
 
-    if(demand < unsoldTokens) {
-      // We have more tokens avaible today than there are asks for
-      for(uint i=0; i<beneficiaries.length; i++) {
-        address beneficiary = beneficiaries[i];
-        // Which means everybody is allowed to exchange their full escrow
-        // into Holos:
-        uint256 amountWeiToExchange = escrow[beneficiary];
-        if ( amountWeiToExchange > 0 ) {
-            exchangeWeiForHolos(beneficiary, amountWeiToExchange);
-            totalWeiExchanged = totalWeiExchanged.add(amountWeiToExchange);
+    while(updateSnapshot.nextBeneficiary != 0x0) {
+      address beneficiary = updateSnapshot.nextBeneficiary;
+      bool unexchangeableAskLeft = false;
+      uint256 sumOfScaledAsks = 0;
+      Ask[] storage asks = asksByBeneficiary[beneficiary];
+      for( uint i=0; i<asks.length; i++) {
+        Ask storage ask = asks[i];
+        if(ask.timestamp <= updateSnapshot.timestamp) {
+          uint256 amountToSpend = scaled(ask.amountWei);
+          sumOfScaledAsks = sumOfScaledAsks.add(amountToSpend);
+          ask.amountWei = ask.amountWei.sub(amountToSpend);
+        } else {
+          unexchangeableAskLeft = true;
         }
       }
-      // Since all escrows are fully exchanged we can delete this list
-      delete beneficiaries;
-    } else {
-      // We have less tokens today than people would like to buy
-      // so we calculate the ratio between supply and demand
-      // (with enough padding) ...
-      uint256 ratio_per_wei = unsoldTokens * 10000000000000000000000 / demand;
-      for(i=0; i<beneficiaries.length; i++) {
-        beneficiary = beneficiaries[i];
-        // ...and scale each ask with this same ratio (divided by the padding)
-        amountWeiToExchange = escrow[beneficiary] * ratio_per_wei / 10000000000000000000000;
-        if ( amountWeiToExchange > 0 ) {
-            exchangeWeiForHolos(beneficiary, amountWeiToExchange);
-            totalWeiExchanged = totalWeiExchanged.add(amountWeiToExchange);
-        }
+
+      if( sumOfScaledAsks > 0) {
+        exchangeWeiForHolos(beneficiary, sumOfScaledAsks);
+        totalWeiExchanged = totalWeiExchanged.add(sumOfScaledAsks);
+      }
+
+      address nextNext = updateSnapshot.nextBeneficiary = beneficiaries[beneficiary];
+
+      // Delete this beneficiary from the list if we could handle all asks (no new ones outside this update scope)
+      // and if it is not the first one - we can't delete the first because addAsk() might have already added new ones.
+      if( !unexchangeableAskLeft && updateSnapshot.lastBeneficiary!=0x0) {
+        beneficiaries[updateSnapshot.lastBeneficiary] = nextNext;
+        beneficiariesCount -= 1;
+      } else {
+        // If we don't delete this beneficiary we need to step over it
+        updateSnapshot.lastBeneficiary = beneficiary;
       }
     }
 
@@ -254,7 +326,7 @@ contract HoloTokenSale is Ownable{
   // the token contract mint the equivalent of Holos for that.
   function exchangeWeiForHolos(address beneficiary, uint256 amountWei) internal {
     uint256 amountOfHolos = holosForWei(amountWei);
-    escrow[beneficiary] = escrow[beneficiary].sub(amountWei);
+    //escrow[beneficiary] = escrow[beneficiary].sub(amountWei);
     demand = demand.sub(amountOfHolos);
     tokenContract.mint(beneficiary, amountOfHolos);
     Exchange(beneficiary, amountWei, amountOfHolos);
