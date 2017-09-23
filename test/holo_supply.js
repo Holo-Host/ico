@@ -1,10 +1,10 @@
-var HoloTokenSupply = artifacts.require("./HoloTokenSupply.sol");
+var HoloTokenSupply = artifacts.require("./HoloSupply.sol");
 
-contract('HoloTokenSupply', function(accounts) {
+contract('HoloSupply', function(accounts) {
 
   it("should start off with 0 supply", function() {
     return HoloTokenSupply.deployed().then(function(instance) {
-      return instance.total_supply();
+      return instance.totalSupply();
     }).then(function(supply) {
       assert.equal(supply, 0, "didn't initialise with 0 supply");
     });
@@ -77,13 +77,13 @@ contract('HoloTokenSupply', function(accounts) {
     const callAddTokensFrom = (caller, assertions) => {
       let supply_before
       let supply_after
-      return instance.total_supply().then((supply) => {
+      return instance.totalSupply().then((supply) => {
         supply_before = supply.toNumber()
         return instance.addTokens(tokens_to_add, {from: caller})
       }).catch((error) => {
         if (!error.message || error.message.search('VM Exception while processing transaction: invalid opcode') < 0) throw error
       }).then(() => {
-        return instance.total_supply()
+        return instance.totalSupply()
       }).then((supply) => {
         supply_after = supply.toNumber()
         assertions(supply_before, supply_after)

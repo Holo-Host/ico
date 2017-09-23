@@ -1,18 +1,18 @@
 pragma solidity ^0.4.15;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract HoloTokenSupply is Ownable {
+contract HoloSupply is Ownable {
   address public updater;
-  uint256 public total_supply;
+  uint256 public totalSupply;
 
   modifier onlyUpater {
     require(msg.sender == updater);
     _;
   }
 
-  function HoloTokenSupply() {
+  function HoloSupply() {
     updater = tx.origin;
-    total_supply = 0;
+    totalSupply = 0;
   }
 
   function setUpdater(address new_updater) onlyOwner {
@@ -20,7 +20,11 @@ contract HoloTokenSupply is Ownable {
   }
 
   function addTokens(uint256 token_count_to_add) onlyUpater {
-    total_supply += token_count_to_add;
+    totalSupply += token_count_to_add;
+  }
+
+  function supplyAvailableForSale() returns (uint256) {
+    return totalSupply * 75 / 100;
   }
 
 }

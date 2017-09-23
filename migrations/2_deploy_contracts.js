@@ -1,26 +1,26 @@
-const HoloToken = artifacts.require("./HoloToken.sol");
-const HoloTokenSale = artifacts.require("./HoloTokenSale.sol");
-const HoloTokenSupply = artifacts.require("./HoloTokenSupply.sol");
+const HoloReceipt = artifacts.require("./HoloReceipt.sol");
+const HoloSale = artifacts.require("./HoloSale.sol");
+const HoloSupply = artifacts.require("./HoloSupply.sol");
 
 module.exports = function(deployer, network, accounts) {
   let sale
-  deployer.deploy(HoloTokenSupply).then(() => {
-    return deployer.deploy(HoloToken, HoloTokenSupply.address)
+  deployer.deploy(HoloSupply).then(() => {
+    return deployer.deploy(HoloReceipt, HoloSupply.address)
   }).then(() => {
-    return deployer.deploy(HoloTokenSale, web3.eth.blockNumber + 10, 1000, 1, web3.toWei(2500000, 'ether'), 10, accounts[0])
+    return deployer.deploy(HoloSale, web3.eth.blockNumber + 10, 1000, 1, web3.toWei(2500000, 'ether'), 10, accounts[0])
   }).then(() => {
-    return HoloTokenSale.deployed()
+    return HoloSale.deployed()
   }).then((s) => {
     sale = s
-    return HoloTokenSupply.deployed()
+    return HoloSupply.deployed()
   }).then((s) => {
     supply = s
-    return HoloToken.deployed()
-  }).then((t) => {
-    token = t
-    return token.setMinter(sale.address)
+    return HoloReceipt.deployed()
+  }).then((r) => {
+    receipt = r
+    return receipt.setMinter(sale.address)
   }).then(() => {
-    return sale.setTokenContract(token.address)
+    return sale.setReceiptContract(receipt.address)
   }).then(() => {
     return sale.setSupplyContract(supply.address)
   })

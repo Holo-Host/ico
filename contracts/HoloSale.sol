@@ -1,8 +1,8 @@
 pragma solidity ^0.4.15;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "./HoloToken.sol";
-import "./HoloTokenSupply.sol";
+import "./HoloReceipt.sol";
+import "./HoloSupply.sol";
 
 // This contract is a crowdsale based on Zeppelin's Crowdsale.sol but with
 // several changes:
@@ -15,7 +15,7 @@ import "./HoloTokenSupply.sol";
 //   * we have a maximum amount per transaction relative to the daily supply
 //
 //
-contract HoloTokenSale is Ownable, Pausable{
+contract HoloSale is Ownable, Pausable{
   using SafeMath for uint256;
 
   // Start and end block where purchases are allowed (both inclusive)
@@ -31,10 +31,10 @@ contract HoloTokenSale is Ownable, Pausable{
   // address where funds are being send to on successful buy
   address public wallet;
 
-  // The token being sold
-  HoloToken public tokenContract;
-  // The contract to read amount of available tokens from
-  HoloTokenSupply private supplyContract;
+  // The token being minted on sale
+  HoloReceipt private receiptContract;
+  // The contract to read amount of available fuel from
+  HoloSupply private supplyContract;
 
   // The account that is allowed to call update()
   // which will happen once per day during the sale period
@@ -72,7 +72,7 @@ contract HoloTokenSale is Ownable, Pausable{
   // one full Holo is minted per Ether),
   // minimum and maximum limits for incoming ETH transfers
   // and the wallet to which the Ethers are being transfered on updated()
-  function HoloTokenSale(
+  function HoloSale(
     uint256 _startBlock, uint256 _endBlock,
     uint256 _rate,
     uint256 _minimumAmountWei, uint256 _maximumPercentageOfDaysSupply,
@@ -100,15 +100,15 @@ contract HoloTokenSale is Ownable, Pausable{
     updater = _updater;
   }
 
-  function setSupplyContract(HoloTokenSupply _supplyContract) onlyOwner {
+  function setSupplyContract(HoloSupply _supplyContract) onlyOwner {
     supplyContract = _supplyContract;
   }
 
-  function setTokenContract(HoloToken _tokenContract) onlyOwner {
-    tokenContract = _tokenContract;
+  function setReceiptContract(HoloReceipt _receiptContract) onlyOwner {
+    receiptContract = _receiptContract;
   }
 
-  function currentDay() public constant returns (uint) {
+  function currentDay() returns (uint) {
     return statsByDay.length;
   }
 
@@ -141,7 +141,7 @@ contract HoloTokenSale is Ownable, Pausable{
     // Send ETH to our wallet
     wallet.transfer(msg.value);
     // Mint receipts
-    tokenContract.mint(beneficiary, amountOfHolosAsked);
+    receiptContract.mint(beneficiary, amountOfHolosAsked);
     // Log this sale
     today.sold = today.sold.add(amountOfHolosAsked);
     ReceiptCreated(beneficiary, msg.value, amountOfHolosAsked);
@@ -150,17 +150,17 @@ contract HoloTokenSale is Ownable, Pausable{
   // Returns true if we are in the live period of the sale
   function withinPeriod() internal constant returns (bool) {
     uint256 current = block.number;
-    return  current >= startBlock && current <= endBlock;
+    return current >= startBlock && current <= endBlock;
   }
 
   // Returns true if amount is not above the maximum share one could buy today
-  function lessThanMaxRatio(uint256 amount, Day today) internal constant returns (bool) {
-    return amount * 100 / maximumPercentageOfDaysSupply <= today.supply;
+  function lessThanMaxRatio(uint256 amount, Day today) internal returns (bool) {
+    return (amount * 100 / maximumPercentageOfDaysSupply <= today.supply);
   }
 
   // Returns false if amount would buy more fuel than we can sell today
-  function lessThanSupply(uint256 amount, Day today) internal constant returns (bool) {
-    return today.sold.add(amount) <= today.supply;
+  function lessThanSupply(uint256 amount, Day today) internal returns (bool) {
+    return (today.sold.add(amount) <= today.supply);
   }
 
   //---------------------------------------------------------------------------
@@ -169,7 +169,7 @@ contract HoloTokenSale is Ownable, Pausable{
 
   function update() onlyUpdater {
     // unsoldTokens is the amount of tokens (*10^18) that we can sell today
-    uint256 unsoldTokens = supplyContract.total_supply() - tokenContract.totalSupply();
+    uint256 unsoldTokens = supplyContract.totalSupply() - receiptContract.totalSupply();
     statsByDay.push(Day(unsoldTokens, 0));
   }
 

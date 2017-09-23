@@ -14,7 +14,7 @@ import "zeppelin-solidity/contracts/math/SafeMath.sol";
 //
 // Token can be burned by a special 'destroyer' role that can only
 // burn its tokens.
-contract HoloToken is Ownable {
+contract HoloReceipt is Ownable {
   string public constant name = "Holo Fuel Certificates";
   string public constant symbol = "HOLO";
   uint8 public constant decimals = 18;
