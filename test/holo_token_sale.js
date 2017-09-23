@@ -1,4 +1,5 @@
 import {expect} from 'chai'
+var BigNumber = require('bignumber.js');
 
 const HoloTokenSale = artifacts.require('./HoloTokenSale.sol')
 const HoloTokenSupply = artifacts.require('./HoloTokenSupply.sol')
@@ -23,8 +24,21 @@ contract('HoloTokenSale', (accounts) => {
   let supply_contract
   let token
 
+  // we get 10 Holos per 1 ETH
+  let rate = web3.toWei(10, 'ether')/1
+
+  let weiToHoloWei = (x) => {
+    return x * rate / web3.toWei(1, 'ether')
+  }
+
+  let holoWeiToWei = (x) => {
+    return x * web3.toWei(1, 'ether') / rate
+  }
+
   beforeEach(async () => {
-    sale = await HoloTokenSale.new(web3.eth.blockNumber + 10, 1000, 1000000000000000000, wallet)
+    let min = web3.toWei(100, 'finney')
+    let maxPercent = 10;
+    sale = await HoloTokenSale.new(web3.eth.blockNumber + 10, 1000, rate, min, maxPercent, wallet)
     supply_contract = await HoloTokenSupply.new()
     token = await HoloToken.new()
     await token.setMinter(sale.address)
@@ -33,360 +47,302 @@ contract('HoloTokenSale', (accounts) => {
     await sale.setUpdater(updater)
   })
 
-  describe('addAsk', () => {
-    contractShouldThrow('should throw if called before ICO started', async () => {
-        return sale.addAsk(tokenBuyer1, {value: 100, from: tokenBuyer1})
+  contractShouldThrow('buyFuel should throw if called before sale started', async () => {
+      return sale.buyFuel(tokenBuyer1, {value: 100, from: tokenBuyer1})
+  })
+
+  contractShouldThrow('should not take money before sale started', async () => {
+    await web3.eth.sendTransaction({
+      to: sale.address,
+      value: web3.toWei(2, 'ether'),
+      from: tokenBuyer1,
+      gas: 4000000
     })
+  })
 
-    describe('after starting block', () => {
-      beforeEach(async () => {
-        // create three blocks (testRPC creates a block for every transaction)
-        for(let i=0; i<10; i++) {
-          await sale.setUpdater(updater)
-        }
-      })
-
-      it('should add an ask correctly when eth is sent to it', async () => {
-        let twoEther = web3.toWei(2, 'ether')
-
-        let demand = await sale.demand()
-        expect(demand.toNumber()).to.equal(0)
-
-        await web3.eth.sendTransaction({
-          to: sale.address,
-          value: twoEther,
-          from: tokenBuyer1,
-          gas: 4000000
-        })
-        let log = await firstEvent(sale.AskAdded())
-        expect(log.args.purchaser).to.equal(tokenBuyer1)
-        expect(log.args.beneficiary).to.equal(tokenBuyer1)
-        expect(log.args.amountWei.toString()).to.equal(twoEther)
-        expect(log.args.amountHolos.toString()).to.equal(web3.toWei(2, 'ether'))
-        let escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
-        expect(escrowOfBuyer1.toString()).to.equal(twoEther)
-        let beneficiaries = await sale.beneficiaries(0)
-        expect(beneficiaries).to.equal(tokenBuyer1)
-        demand = await sale.demand()
-        expect(demand.toString()).to.equal(web3.toWei(2, 'ether'))
-
-        await web3.eth.sendTransaction({
-          to: sale.address,
-          value: twoEther,
-          from: tokenBuyer2,
-          gas: 4000000
-        })
-        log = await firstEvent(sale.AskAdded())
-        expect(log.args.purchaser).to.equal(tokenBuyer2)
-        expect(log.args.beneficiary).to.equal(tokenBuyer2)
-        expect(log.args.amountWei.toString()).to.equal(twoEther)
-        expect(log.args.amountHolos.toString()).to.equal(web3.toWei(2, 'ether'))
-        escrowOfBuyer1 = await sale.inEscrowFor.call(tokenBuyer1)
-        let escrowOfBuyer2 = await sale.inEscrowFor.call(tokenBuyer2)
-        beneficiaries = await sale.beneficiaries(1)
-        demand = await sale.demand()
-
-        expect(escrowOfBuyer1.toString()).to.equal(twoEther)
-        expect(escrowOfBuyer2.toString()).to.equal(twoEther)
-        expect(beneficiaries).to.equal(tokenBuyer2)
-        expect(demand.toString()).to.equal(web3.toWei(4, 'ether'))
-      })
-
-      describe('after three token purchases', () => {
-        beforeEach(async () => {
-          await sale.addAsk(tokenBuyer1, {value: web3.toWei(2, 'ether'), from: tokenBuyer1})
-          await sale.addAsk(tokenBuyer2, {value: web3.toWei(5, 'ether'), from: tokenBuyer2})
-          await sale.addAsk(tokenBuyer3, {value: web3.toWei(1, 'ether'), from: tokenBuyer3})
-        })
-
-        it('should have 3 beneficiaries asks', async () => {
-          let beneficiariesLength = await sale.beneficiariesLength.call()
-          expect(beneficiariesLength.toNumber()).to.equal(3)
-        })
-
-        it('should have a demand of 8', async () => {
-          let demand = await sale.demand.call()
-          expect(demand.toString()).to.equal(web3.toWei(8, 'ether'))
-        })
-
-        it('addAsk should not add a beneficiary to the list of beneficiaries twice', async () => {
-          await sale.addAsk(tokenBuyer1, {value: web3.toWei(2, 'ether'), from: tokenBuyer1})
-          let beneficiariesLength = await sale.beneficiariesLength.call()
-          expect(beneficiariesLength.toNumber()).to.equal(3)
-        })
-
-        describe('withdraw', () => {
-          it('should send back the deposited ether', async () => {
-            let gasCost = 3766299999993900;
-
-            let before = await web3.eth.getBalance(tokenBuyer1)
-            await sale.withdraw({from: tokenBuyer1})
-            let escrow = await sale.inEscrowFor.call(tokenBuyer1)
-            expect(escrow.toNumber()).to.equal(0)
-            let after = await web3.eth.getBalance(tokenBuyer1)
-            let differenceWei = (after.toNumber() - before.toNumber())
-            expect(differenceWei + gasCost + 100000).to.be.at.least(2000000000000000000)
-
-            before = await web3.eth.getBalance(tokenBuyer2)
-            await sale.withdraw({from: tokenBuyer2})
-            escrow = await sale.inEscrowFor.call(tokenBuyer2)
-            expect(escrow.toNumber()).to.equal(0)
-            after = await web3.eth.getBalance(tokenBuyer2)
-            differenceWei = (after.toNumber() - before.toNumber())
-            expect(differenceWei + gasCost + 100000).to.be.at.least(5000000000000000000)
-
-            before = await web3.eth.getBalance(tokenBuyer3)
-            await sale.withdraw({from: tokenBuyer3})
-            escrow = await sale.inEscrowFor.call(tokenBuyer3)
-            expect(escrow.toNumber()).to.equal(0)
-            after = await web3.eth.getBalance(tokenBuyer3)
-            differenceWei = (after.toNumber() - before.toNumber())
-            expect(differenceWei + gasCost + 100000).to.be.at.least(1000000000000000000)
-          })
-
-          it('should delete the caller from the beneficiaries list', async () => {
-            let countBefore = await sale.beneficiariesLength.call()
-            await sale.withdraw({from: tokenBuyer1})
-            let countAfter = await sale.beneficiariesLength.call()
-            expect(countBefore - countAfter).to.equal(1)
-            for(let i=0; i<countAfter; i++) {
-              let b = sale.beneficiaries.call(i)
-              expect(b).to.not.equal(tokenBuyer1)
-            }
-          })
-
-          it('should delete the caller from the beneficiaries list even if they send tokens multiple times', async () => {
-            await sale.addAsk(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
-            await sale.addAsk(tokenBuyer1, {value: web3.toWei(200, 'finney'), from: tokenBuyer1})
-            let countBefore = await sale.beneficiariesLength.call()
-            await sale.withdraw({from: tokenBuyer1})
-            let countAfter = await sale.beneficiariesLength.call()
-            expect(countBefore - countAfter).to.equal(1)
-            for(let i=0; i<countAfter; i++) {
-              let b = await sale.beneficiaries.call(i)
-              expect(b).to.not.equal(tokenBuyer1)
-            }
-          })
-
-          it('should reduce the sale contracts balance by the amount that was in escrow', async () => {
-            let before = await web3.eth.getBalance(sale.address)
-            let escrow = await sale.inEscrowFor.call(tokenBuyer2)
-            expect(escrow.toString()).to.equal(web3.toWei(5, 'ether'))
-            await sale.withdraw({from: tokenBuyer2})
-            let after = await web3.eth.getBalance(sale.address)
-            expect(after.toNumber()).to.equal(before.toNumber() - escrow.toNumber())
-          })
-        })
-
-        describe('withdrawFor', () => {
-          contractShouldThrow('should not be callable by non-owner', async () => {
-            await sale.withdrawFor(tokenBuyer1, {from: tokenBuyer2})
-          })
-
-          it('should send back deposited ether to mentioned buyer', async () => {
-            let gasCost = 3766299999993900;
-
-            let before = await web3.eth.getBalance(tokenBuyer1)
-            await sale.withdrawFor(tokenBuyer1, {from: owner})
-            let escrow = await sale.inEscrowFor.call(tokenBuyer1)
-            expect(escrow.toNumber()).to.equal(0)
-            let after = await web3.eth.getBalance(tokenBuyer1)
-            let differenceWei = (after.toNumber() - before.toNumber())
-            expect(differenceWei + gasCost + 1).to.be.at.least(2000000000000000000)
-          })
-        })
-
-        contractShouldThrow('should throw if nothing in escrow for beneficiary', async () => {
-          await sale.withdraw({from: updater})
-        })
-
-        contractShouldThrow('should throw if already withdrawn', async () => {
-          await sale.withdraw({from: tokenBuyer1})
-          assert(true)
-          await sale.withdraw({from: tokenBuyer1})
-        })
-
-
-        describe('after update with enough supply', () => {
-          let walletBalanceBefore
-
-          beforeEach(async () => {
-            await supply_contract.addTokens(web3.toWei(10, 'ether'))
-            assert(await supply_contract.total_supply() == 10000000000000000000)
-
-            let escrow1 = await sale.inEscrowFor.call(tokenBuyer1)
-            let escrow2 = await sale.inEscrowFor.call(tokenBuyer2)
-            let escrow3 = await sale.inEscrowFor.call(tokenBuyer3)
-            assert(escrow1 == 2000000000000000000)
-            assert(escrow2 == 5000000000000000000)
-            assert(escrow3 == 1000000000000000000)
-
-            let demand = await sale.demand()
-            assert(demand == 8000000000000000000)
-
-            walletBalanceBefore = web3.eth.getBalance(wallet)
-
-            await sale.update({from: updater})
-          })
-
-          it('should have minted the tokens for everybody', async () => {
-            let balance1 = await token.balanceOf(tokenBuyer1)
-            let balance2 = await token.balanceOf(tokenBuyer2)
-            let balance3 = await token.balanceOf(tokenBuyer3)
-            expect(balance1.toString()).to.equal(web3.toWei(2, 'ether'))
-            expect(balance2.toString()).to.equal(web3.toWei(5, 'ether'))
-            expect(balance3.toString()).to.equal(web3.toWei(1, 'ether'))
-          })
-
-          it('should have resetted the demand to 0', async () => {
-            let demand = await sale.demand.call()
-            expect(demand.toNumber()).to.equal(0)
-          })
-
-          it('should have resetted the "beneficiaries" list', async () => {
-            let beneficiariesLength = await sale.beneficiariesLength.call()
-            expect(beneficiariesLength.toNumber()).to.equal(0)
-          })
-
-          it('should have resetted the escrows for all buyers', async () => {
-            let escrow1 = await sale.inEscrowFor.call(tokenBuyer1)
-            let escrow2 = await sale.inEscrowFor.call(tokenBuyer2)
-            let escrow3 = await sale.inEscrowFor.call(tokenBuyer3)
-            expect(escrow1.toNumber()).to.equal(0)
-            expect(escrow2.toNumber()).to.equal(0)
-            expect(escrow3.toNumber()).to.equal(0)
-          })
-
-          it('should have sent the ethers to the wallet', async () => {
-            let walletBalance = await web3.eth.getBalance(wallet)
-            let walletDifference = walletBalance.toNumber() - walletBalanceBefore;
-            expect(''+walletDifference).to.equal(web3.toWei(8, 'ether'))
-          })
-
-          it('token should have a matching total supply', async () => {
-            let totalSupply = await token.totalSupply()
-            expect(totalSupply.toString()).to.equal(web3.toWei(8, 'ether'))
-          })
-
-          describe('on the second day with double demand than supply', () => {
-            beforeEach(async () => {
-              await supply_contract.addTokens(web3.toWei(2, 'ether'))
-              assert(await supply_contract.total_supply() == 12000000000000000000)
-              await sale.addAsk(tokenBuyer4, {value: web3.toWei(2, 'ether'), from: tokenBuyer4})
-              await sale.addAsk(tokenBuyer5, {value: web3.toWei(5, 'ether'), from: tokenBuyer5})
-              await sale.addAsk(tokenBuyer6, {value: web3.toWei(1, 'ether'), from: tokenBuyer6})
-
-              let demand = await sale.demand()
-              assert(demand == 8000000000000000000)
-
-              walletBalanceBefore = web3.eth.getBalance(wallet)
-
-              await sale.update({from: updater})
-            })
-
-            it('should have minted half of the asked tokens', async () => {
-              let balance1 = await token.balanceOf(tokenBuyer4)
-              let balance2 = await token.balanceOf(tokenBuyer5)
-              let balance3 = await token.balanceOf(tokenBuyer6)
-              expect(balance1.toString()).to.equal(web3.toWei(1, 'ether'))
-              expect(balance2.toString()).to.equal(web3.toWei(2500, 'finney'))
-              expect(balance3.toString()).to.equal(web3.toWei(500, 'finney'))
-            })
-
-            it('should have left half of the demand there', async () => {
-              let demand = await sale.demand.call()
-              expect(demand.toString()).to.equal(web3.toWei(4, 'ether'))
-            })
-
-            it('should have left the "beneficiaries" list as is', async () => {
-              let beneficiariesLength = await sale.beneficiariesLength.call()
-              expect(beneficiariesLength.toNumber()).to.equal(3)
-            })
-
-            it('should have left half the ethers in escrows for all buyers', async () => {
-              let escrow1 = await sale.inEscrowFor.call(tokenBuyer4)
-              let escrow2 = await sale.inEscrowFor.call(tokenBuyer5)
-              let escrow3 = await sale.inEscrowFor.call(tokenBuyer6)
-              expect(escrow1.toString()).to.equal(web3.toWei(1, 'ether'))
-              expect(escrow2.toString()).to.equal(web3.toWei(2500, 'finney'))
-              expect(escrow3.toString()).to.equal(web3.toWei(500, 'finney'))
-            })
-
-            it('should have sent the spent ethers to the wallet', async () => {
-              let walletBalance = await web3.eth.getBalance(wallet)
-              let walletDifference = walletBalance.toNumber() - walletBalanceBefore;
-              expect(''+walletDifference).to.equal(web3.toWei(4, 'ether'))
-            })
-
-            it('token should have a matching total supply', async () => {
-              let totalSupply = await token.totalSupply()
-              expect(totalSupply.toString()).to.equal(web3.toWei(12, 'ether'))
-            })
-
-            describe('on the third day with 2 more supply and after one buyer has withdrawn his one remaining ether', () => {
-              beforeEach(async () => {
-                await sale.withdraw({from: tokenBuyer4})
-                await supply_contract.addTokens(web3.toWei(2, 'ether'))
-
-                let demand = await sale.demand()
-                expect(demand.toNumber()).to.equal(3000000000000000000)
-
-                walletBalanceBefore = web3.eth.getBalance(wallet)
-
-                await sale.update({from: updater})
-              })
-
-              it('should have minted 2/3 of the asked tokens', async () => {
-                // buyer should be stil the same
-                let balance1 = await token.balanceOf(tokenBuyer4)
-                expect(balance1.toString()).to.equal(web3.toWei(1, 'ether'))
-
-                let balance2 = await token.balanceOf(tokenBuyer5)
-                let balance3 = await token.balanceOf(tokenBuyer6)
-                expect(balance2.toString()).to.equal('4166666666666666666')
-                expect(balance3.toString()).to.equal('833333333333333333')
-              })
-
-              it('should have left 1/3 of the demand there', async () => {
-                let demand = await sale.demand.call()
-                expect(demand.toString()).to.equal('1000000000000000001')
-              })
-
-              it('should have still two buyers in the beneficiaries list', async () => {
-                let beneficiariesLength = await sale.beneficiariesLength.call()
-                expect(beneficiariesLength.toNumber()).to.equal(2)
-              })
-
-              it('should have left 1/3 the remaining ethers in escrows for all buyers', async () => {
-                let escrow1 = await sale.inEscrowFor.call(tokenBuyer4)
-                let escrow2 = await sale.inEscrowFor.call(tokenBuyer5)
-                let escrow3 = await sale.inEscrowFor.call(tokenBuyer6)
-                expect(escrow1.toString()).to.equal('0')
-                expect(escrow2.toString()).to.equal('833333333333333334')
-                expect(escrow3.toString()).to.equal('166666666666666667')
-              })
-
-              it('should have sent the spent ethers to the wallet', async () => {
-                let walletBalance = await web3.eth.getBalance(wallet)
-                let walletDifference = walletBalance.toNumber() - walletBalanceBefore;
-                expect(''+walletDifference).to.equal(web3.toWei(2, 'ether'))
-              })
-
-              it('token should have a matching total supply', async () => {
-                let totalSupply = await token.totalSupply()
-                expect(totalSupply.toString()).to.equal('13999999999999999999')
-              })
-
-            })
-
-          })
-        })
-
-      })
-
+  describe('currentDay()', () => {
+    it('should be 0 before sale started', async () => {
+      let day = await sale.currentDay.call()
+      expect(day.toNumber()).to.equal(0)
     })
   })
 
 
+  describe('after starting block', () => {
+    beforeEach(async () => {
+      // create three blocks (testRPC creates a block for every transaction)
+      for(let i=0; i<10; i++) {
+        await sale.setUpdater(updater)
+      }
+    })
 
+    describe('buyFuel()', () => {
+      contractShouldThrow('should throw if called before first initial update', () => {
+        return sale.buyFuel(tokenBuyer1, {from: tokenBuyer1, value: web3.toWei(2, 'ether')})
+      })
+    })
+
+    describe('default function', () => {
+      contractShouldThrow('should throw if called before first initial update', () => {
+        return web3.eth.sendTransaction({
+          to: sale.address,
+          value: web3.toWei(2, 'ether'),
+          from: tokenBuyer1,
+          gas: 4000000
+        })
+      })
+    })
+
+    describe('update()', () => {
+      contractShouldThrow('should throw if called by non-updater', () => {
+        return sale.update()
+      })
+
+      it('should not throw when called by updater', () => {
+        return sale.update({from: updater})
+      })
+    })
+
+    describe('after first update', () => {
+      let walletBalanceBefore
+      let tokenSupply = web3.toWei(25, 'ether') / 1
+
+      beforeEach(async () => {
+        await supply_contract.addTokens(tokenSupply)
+        assert(await supply_contract.total_supply() == tokenSupply)
+        await sale.update({from: updater})
+      })
+
+      it('stats should contain the first day', async () => {
+        let day = await sale.currentDay.call();
+        expect(day.toNumber()).to.equal(1)
+        let stats = await sale.statsByDay(0)
+        expect(stats[0].toNumber()).to.equal(tokenSupply)
+        expect(stats[1].toNumber()).to.equal(0)
+      })
+
+      let buyFuel = (amount) => {
+        return () => {
+          it('should have added the amount of sold Holos to the stats', async () => {
+            let stats = await sale.statsByDay(0)
+            expect(stats[0].toNumber()).to.equal(tokenSupply)
+            expect(stats[1].toNumber()).to.equal(weiToHoloWei(amount))
+          })
+
+          it('should have created the correct amount of Holo Receipts', async () => {
+            let amountReceipts = await token.balanceOf(tokenBuyer1)
+            expect(amountReceipts.toNumber()).to.equal(weiToHoloWei(amount))
+          })
+
+          it('should have created an event', async () => {
+            let log = await firstEvent(sale.ReceiptCreated())
+            expect(log.args.beneficiary).to.equal(tokenBuyer1)
+            expect(log.args.amountWei.toNumber()).to.equal(amount)
+            expect(log.args.amountHolos.toNumber()).to.equal(weiToHoloWei(amount))
+          })
+
+          it('should have sent the incoming ETH to the wallet', async () => {
+            let balance = await web3.eth.getBalance(wallet)
+            expect(balance.toNumber() - walletBalanceBefore.toNumber()).to.equal(amount)
+          })
+        }
+      }
+
+      describe('buyTokens()', () => {
+        describe('with the right amount of ETH', () => {
+          let amount = holoWeiToWei(tokenSupply / 20)
+
+          beforeEach(async () => {
+            walletBalanceBefore = await web3.eth.getBalance(wallet)
+            return sale.buyFuel(tokenBuyer1, {value: amount})
+          })
+
+          describe('[should do sale]', buyFuel(amount))
+        })
+
+        describe('when paused', () => {
+          let amount = holoWeiToWei(tokenSupply / 20)
+          beforeEach(() => {
+            return sale.pause()
+          })
+
+          contractShouldThrow('it should not work even when amount is right', () => {
+            return sale.buyFuel(tokenBuyer1, {value: amount})
+          })
+
+          describe('one should be able to unpause', () => {
+            beforeEach(async () => {
+              await sale.unpause()
+              walletBalanceBefore = await web3.eth.getBalance(wallet)
+              return sale.buyFuel(tokenBuyer1, {value: amount})
+            })
+
+            describe('[should do sale]', buyFuel(amount))
+          })
+        })
+
+        describe('with too much ETH (over 10% of supply)', () => {
+          let tenPercent = tokenSupply / 9
+          let amount = holoWeiToWei(tenPercent)
+
+          contractShouldThrow('it should not accept the transaction', () => {
+            return sale.buyFuel(tokenBuyer1, {value: amount})
+          })
+        })
+
+        describe('with too less ETH (< 0.1ETH)', () => {
+          let amount = web3.toWei(99, 'finney')
+          let walletBalanceBefore
+
+          contractShouldThrow('it should not accept the transaction', () => {
+            return sale.buyFuel(tokenBuyer1, {value: amount})
+          })
+        })
+      })
+
+      describe('default function', () => {
+        describe('with the right amount of ETH', () => {
+          let amount = holoWeiToWei(tokenSupply / 20)
+
+          beforeEach(async () => {
+            walletBalanceBefore = web3.eth.getBalance(wallet)
+            return web3.eth.sendTransaction({
+              to: sale.address,
+              value: amount,
+              from: tokenBuyer1,
+              gas: 4000000
+            })
+          })
+
+          describe('[should do sale]', buyFuel(amount))
+        })
+
+        describe('when paused', () => {
+          let amount = holoWeiToWei(tokenSupply / 20)
+          beforeEach(() => {
+            return sale.pause()
+          })
+
+          contractShouldThrow('it should not work even when amount is right', () => {
+            return web3.eth.sendTransaction({
+              to: sale.address,
+              value: amount,
+              from: tokenBuyer1,
+              gas: 4000000
+            })
+          })
+
+          describe('one should be able to unpause', () => {
+            beforeEach(async () => {
+              await sale.unpause()
+              walletBalanceBefore = await web3.eth.getBalance(wallet)
+              return web3.eth.sendTransaction({
+                to: sale.address,
+                value: amount,
+                from: tokenBuyer1,
+                gas: 4000000
+              })
+            })
+
+            describe('[should do sale]', buyFuel(amount))
+          })
+        })
+
+        describe('with too much ETH (over 10% of supply)', () => {
+          let tenPercent = tokenSupply / 10
+          let amount = holoWeiToWei(tenPercent) + 100
+
+          contractShouldThrow('it should not accept the transaction', () => {
+            return web3.eth.sendTransaction({
+              to: sale.address,
+              value: amount,
+              from: tokenBuyer1,
+              gas: 4000000
+            })
+          })
+        })
+
+        describe('with too less ETH (< 0.1ETH)', () => {
+          let amount = web3.toWei(99, 'finney')
+          let walletBalanceBefore
+
+          contractShouldThrow('it should not accept the transaction', () => {
+            return web3.eth.sendTransaction({
+              to: sale.address,
+              value: amount,
+              from: tokenBuyer1,
+              gas: 4000000
+            })
+          })
+        })
+      })
+
+      describe('after 50% of day supply sold', () => {
+        let walletBalanceBefore
+
+        beforeEach(async () => {
+          let tenPercent = tokenSupply / 10
+          let weiAmount = holoWeiToWei(tenPercent)
+          await sale.buyFuel(tokenBuyer1, {value: weiAmount, from: tokenBuyer1})
+          await sale.buyFuel(tokenBuyer2, {value: weiAmount, from: tokenBuyer2})
+          await sale.buyFuel(tokenBuyer3, {value: weiAmount, from: tokenBuyer3})
+          await sale.buyFuel(tokenBuyer4, {value: weiAmount, from: tokenBuyer4})
+          await sale.buyFuel(tokenBuyer5, {value: weiAmount, from: tokenBuyer5})
+        })
+
+        it('daily stats should show correct amount of sold receipts', async () => {
+          let stats = await sale.statsByDay(0)
+          expect(stats[1].toNumber()).to.equal(tokenSupply / 2)
+        })
+
+        it('token contract should have minted the correct amount', async () => {
+          let tokenMinted = await token.totalSupply()
+          expect(tokenMinted.toNumber()).to.equal(tokenSupply / 2)
+        })
+
+        it('update should create a new day and carry over non-sold tokens', async () => {
+          // 10 new tokens in supply
+          supply_contract.addTokens(tokenSupply)
+          assert(await supply_contract.total_supply() == 2*tokenSupply)
+          await sale.update({from: updater})
+          let day = await sale.currentDay.call()
+          expect(day.toNumber()).to.equal(2)
+          let stats = await sale.statsByDay(1)
+          // the 10 new plus the 5 unsold from yesterday
+          expect(stats[0].toNumber()).to.equal(tokenSupply*3/2)
+          expect(stats[1].toNumber()).to.equal(0)
+        })
+
+        describe('after 95% of day supply sold', () => {
+          beforeEach(async () => {
+            let tenPercent = tokenSupply / 10
+            let weiAmount = holoWeiToWei(tenPercent)
+            await sale.buyFuel(tokenBuyer1, {value: weiAmount, from: tokenBuyer1})
+            await sale.buyFuel(tokenBuyer2, {value: weiAmount, from: tokenBuyer2})
+            await sale.buyFuel(tokenBuyer3, {value: weiAmount, from: tokenBuyer3})
+            await sale.buyFuel(tokenBuyer4, {value: weiAmount, from: tokenBuyer4})
+            await sale.buyFuel(tokenBuyer5, {value: weiAmount / 2, from: tokenBuyer5})
+          })
+
+          it('daily stats should show correct amount of sold receipts', async () => {
+            let stats = await sale.statsByDay(0)
+            let percent95 = new BigNumber(tokenSupply).times(95).dividedBy(100)
+            expect(stats[1].toNumber()).to.equal(percent95.toNumber())
+          })
+
+          it('token contract should have minted the correct amount', async () => {
+            let tokenMinted = await token.totalSupply()
+            let percent95 = new BigNumber(tokenSupply).times(95).dividedBy(100)
+            expect(tokenMinted.toNumber()).to.equal(percent95.toNumber())
+          })
+
+          contractShouldThrow('buyer should not be able to buy more than supply', () => {
+            let tenPercent = tokenSupply / 10
+            let amount = holoWeiToWei(tenPercent)
+            return sale.buyFuel(tokenBuyer4, {value: amount, from: tokenBuyer4})
+          })
+        })
+      })
+    })
+  })
 })

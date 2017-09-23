@@ -7,7 +7,7 @@ module.exports = function(deployer, network, accounts) {
   deployer.deploy(HoloTokenSupply).then(() => {
     return deployer.deploy(HoloToken, HoloTokenSupply.address)
   }).then(() => {
-    return deployer.deploy(HoloTokenSale, web3.eth.blockNumber + 10, 1000, 1, accounts[0])
+    return deployer.deploy(HoloTokenSale, web3.eth.blockNumber + 10, 1000, 1, web3.toWei(2500000, 'ether'), 10, accounts[0])
   }).then(() => {
     return HoloTokenSale.deployed()
   }).then((s) => {
