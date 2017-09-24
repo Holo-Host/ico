@@ -138,7 +138,7 @@ contract('HoloSale', (accounts) => {
           })
 
           it('should have created an event', async () => {
-            let log = await firstEvent(sale.ReceiptCreated())
+            let log = await firstEvent(sale.ReceiptsCreated())
             expect(log.args.beneficiary).to.equal(buyer1)
             expect(log.args.amountWei.toNumber()).to.equal(amount)
             expect(log.args.amountHolos.toNumber()).to.equal(weiToHoloWei(amount))

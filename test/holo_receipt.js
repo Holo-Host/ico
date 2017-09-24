@@ -1,7 +1,7 @@
 import {expect} from 'chai'
 import {d} from 'lightsaber'
 
-const HoloToken = artifacts.require('./HoloReceipt.sol')
+const HoloReceipt = artifacts.require('./HoloReceipt.sol')
 
 import {
   contractIt,
@@ -50,7 +50,7 @@ contract('HoloReceipt', (accounts) => {
   }
 
   beforeEach(async () => {
-    receipt = await HoloToken.deployed()
+    receipt = await HoloReceipt.deployed()
     await receipt.setMinter(accounts[0])
   })
 

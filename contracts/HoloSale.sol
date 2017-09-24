@@ -40,7 +40,7 @@ contract HoloSale is Ownable, Pausable{
   // which will happen once per day during the sale period
   address private updater;
 
-  // True when finalize() was called before
+  // Will be set to true by finalize()
   bool private finalized = false;
 
   // For every day of the sale we store one instance of this struct
@@ -54,7 +54,7 @@ contract HoloSale is Ownable, Pausable{
   // Growing list of days
   Day[] public statsByDay;
 
-  event ReceiptCreated(address beneficiary, uint256 amountWei, uint256 amountHolos);
+  event ReceiptsCreated(address beneficiary, uint256 amountWei, uint256 amountHolos);
 
 
   modifier onlyUpdater {
@@ -147,7 +147,7 @@ contract HoloSale is Ownable, Pausable{
     receiptContract.mint(beneficiary, amountOfHolosAsked);
     // Log this sale
     today.sold = today.sold.add(amountOfHolosAsked);
-    ReceiptCreated(beneficiary, msg.value, amountOfHolosAsked);
+    ReceiptsCreated(beneficiary, msg.value, amountOfHolosAsked);
   }
 
   // Returns true if we are in the live period of the sale

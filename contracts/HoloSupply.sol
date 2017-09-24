@@ -24,6 +24,9 @@ contract HoloSupply is Ownable {
   }
 
   function supplyAvailableForSale() returns (uint256) {
+    // We make only 75% of all tokens available for sale.
+    // 25% goes to the team.
+    // See finalize() in HoloSale contract.
     return totalSupply * 75 / 100;
   }
 
