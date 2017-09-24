@@ -38,7 +38,7 @@ contract('HoloSale', (accounts) => {
   beforeEach(async () => {
     let min = web3.toWei(100, 'finney')
     let maxPercent = 10;
-    sale = await HoloSale.new(web3.eth.blockNumber + 10, 1000, rate, min, maxPercent, wallet)
+    sale = await HoloSale.new(web3.eth.blockNumber + 10, web3.eth.blockNumber + 500, rate, min, maxPercent, wallet)
     supply_contract = await HoloSupply.new()
     receipt = await HoloReceipt.new()
     await receipt.setMinter(sale.address)
@@ -105,11 +105,14 @@ contract('HoloSale', (accounts) => {
 
     describe('after first update', () => {
       let walletBalanceBefore
-      let supply = web3.toWei(25, 'ether') / 1
+      let supply = web3.toWei(30, 'ether') / 1
 
       beforeEach(async () => {
-        await supply_contract.addTokens(supply)
-        assert(await supply_contract.totalSupply() == supply)
+        let supplyForSale = supply
+        let totalSupply = new BigNumber(supplyForSale).times(4).dividedBy(3)
+        await supply_contract.addTokens(totalSupply)
+        let _supplyForSale = await supply_contract.supplyAvailableForSale.call()
+        expect(_supplyForSale.toNumber()).to.equal(supplyForSale)
         await sale.update({from: updater})
       })
 
@@ -281,7 +284,8 @@ contract('HoloSale', (accounts) => {
         let walletBalanceBefore
 
         beforeEach(async () => {
-          let tenPercent = supply / 10
+          let supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
+          let tenPercent = supplyAvailableForSale.toNumber() / 10
           let weiAmount = holoWeiToWei(tenPercent)
           await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
           await sale.buyFuel(buyer2, {value: weiAmount, from: buyer2})
@@ -301,21 +305,25 @@ contract('HoloSale', (accounts) => {
         })
 
         it('update should create a new day and carry over non-sold fuel', async () => {
-          // 10 new fuel units in supply
-          supply_contract.addTokens(supply)
-          assert(await supply_contract.totalSupply() == 2*supply)
+          // double available fuel
+          let totalSupply = await supply_contract.totalSupply()
+          await supply_contract.addTokens(totalSupply)
+          let supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
+          expect(supplyAvailableForSale.toNumber()).to.equal(2*supply)
+          //assert(await supply_contract.supplyAvailableForSale() == 2*supply)
           await sale.update({from: updater})
           let day = await sale.currentDay.call()
           expect(day.toNumber()).to.equal(2)
           let stats = await sale.statsByDay(1)
-          // the 10 new plus the 5 unsold from yesterday
+          // the new full supply plus half from yesterday
           expect(stats[0].toNumber()).to.equal(supply*3/2)
           expect(stats[1].toNumber()).to.equal(0)
         })
 
         describe('after 95% of day supply sold', () => {
           beforeEach(async () => {
-            let tenPercent = supply / 10
+            let supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
+            let tenPercent = supplyAvailableForSale.toNumber() / 10
             let weiAmount = holoWeiToWei(tenPercent)
             await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
             await sale.buyFuel(buyer2, {value: weiAmount, from: buyer2})
@@ -340,6 +348,34 @@ contract('HoloSale', (accounts) => {
             let tenPercent = supply / 10
             let amount = holoWeiToWei(tenPercent)
             return sale.buyFuel(buyer4, {value: amount, from: buyer4})
+          })
+
+          describe('finalize', () => {
+            contractShouldThrow('should not be callable if sale has not ended', () => {
+              return sale.finalize();
+            })
+
+            it('should have minted the 25% for the team and finish minting period', async () => {
+              // forward testrpcs blocknumber
+              for(let i=0; i<501; i++) {
+                await sale.setUpdater(updater);
+              }
+
+              let mintingFinished = await receipt.mintingFinished.call()
+              expect(mintingFinished).to.equal(false)
+
+              await sale.finalize()
+
+              let teamBalance = await receipt.balanceOf(wallet)
+              let allTokens = await receipt.totalSupply()
+              expect(teamBalance.toNumber()).to.equal(new BigNumber(allTokens).times(25).dividedBy(100).toNumber())
+              mintingFinished = await receipt.mintingFinished.call()
+              expect(mintingFinished).to.equal(true)
+            })
+
+            contractShouldThrow('should not be callable again', () => {
+              return sale.finalize()
+            })
           })
         })
       })

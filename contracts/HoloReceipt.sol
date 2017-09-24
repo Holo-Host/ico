@@ -147,7 +147,7 @@ contract HoloReceipt is Ownable {
     return true;
   }
 
-  function finishMinting() onlyOwner returns (bool) {
+  function finishMinting() onlyMinter returns (bool) {
     mintingFinished = true;
     MintingFinished();
     return true;

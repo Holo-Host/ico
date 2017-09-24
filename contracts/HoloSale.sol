@@ -40,6 +40,9 @@ contract HoloSale is Ownable, Pausable{
   // which will happen once per day during the sale period
   address private updater;
 
+  // True when finalize() was called before
+  bool private finalized = false;
+
   // For every day of the sale we store one instance of this struct
   struct Day {
     // The supply available to sell on a given day
@@ -169,12 +172,30 @@ contract HoloSale is Ownable, Pausable{
 
   function update() onlyUpdater {
     // unsoldTokens is the amount of tokens (*10^18) that we can sell today
-    uint256 unsoldTokens = supplyContract.totalSupply() - receiptContract.totalSupply();
+    uint256 unsoldTokens = supplyContract.supplyAvailableForSale() - receiptContract.totalSupply();
     statsByDay.push(Day(unsoldTokens, 0));
   }
+
+  //---------------------------------------------------------------------------
+  // Finalize
+  //---------------------------------------------------------------------------
 
   // Returns true if crowdsale event has ended
   function hasEnded() public constant returns (bool) {
     return block.number > endBlock;
+  }
+
+  // Mints a third of all tokens minted so far for the team.
+  // => Team ends up with 25% of all tokens.
+  // Also calls finishMinting() on the token contract which makes it
+  // impossible to mint more.
+  function finalize() onlyOwner {
+    require(!finalized);
+    require(hasEnded());
+    uint256 receiptsMinted = receiptContract.totalSupply();
+    uint256 shareForTheTeam = receiptsMinted / 3;
+    receiptContract.mint(wallet, shareForTheTeam);
+    receiptContract.finishMinting();
+    finalized = true;
   }
 }
