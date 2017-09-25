@@ -468,6 +468,15 @@ contract('HoloReceipt', (accounts) => {
         assert(false)
       })
 
+      contractShouldThrow('should throw if called with negative amount', async () => {
+        let bob = accounts[1]
+        await receipt.mint(bob, 11)
+        let totalSupply = await receipt.totalSupply.call()
+        expect(totalSupply.toNumber()).to.equal(11)
+        await receipt.burn(-1, {from: bob})
+        assert(false)
+      })
+
       contractIt('destroyer can burn their receipts', async () => {
         let bob = accounts[1]
         await receipt.mint(bob, 11)
@@ -533,6 +542,13 @@ contract('HoloReceipt', (accounts) => {
         expect(after.toNumber()).to.equal(before.toNumber() + 5)
       })
 
+      contractShouldThrow('should not be callable by the old minter after miner was changed', async () => {
+        let oldMinter = await receipt.minter()
+        await receipt.setMinter(accounts[6])
+        await receipt.mint(accounts[1], 5, {from: oldMinter})
+        assert(false)
+      })
+
       contractShouldThrow('should throw when called by the owner who is not the minter', async () => {
         let newMinter = accounts[5]
         await receipt.setMinter(newMinter)
@@ -563,6 +579,10 @@ contract('HoloReceipt', (accounts) => {
       contractShouldThrow('should throw when called with negative amount', async () => {
         await receipt.mint(accounts[1], 100)
         await receipt.mint(accounts[1], -1)
+      })
+
+      contractShouldThrow('should throw when called with 0', async () => {
+        await receipt.mint(accounts[1], 0)
       })
     })
 })
