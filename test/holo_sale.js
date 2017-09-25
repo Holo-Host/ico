@@ -14,16 +14,12 @@ contract('HoloSale', (accounts) => {
   let wallet = accounts[9]
   let owner = accounts[0]
   let updater = accounts[1]
-  let buyer1 = accounts[1]
-  let buyer2 = accounts[2]
-  let buyer3 = accounts[3]
-  let buyer4 = accounts[4]
-  let buyer5 = accounts[5]
-  let buyer6 = accounts[6]
-  let buyer7 = accounts[7]
-  let buyer8 = accounts[8]
-  let buyer9 = accounts[9]
-  let buyer10 = accounts[0]
+  let buyer1 = accounts[2]
+  let buyer2 = accounts[3]
+  let buyer3 = accounts[4]
+  let buyer4 = accounts[5]
+  let buyer5 = accounts[6]
+  let buyer6 = accounts[7]
   let sale
   let supply_contract
   let receipt
