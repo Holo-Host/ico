@@ -49,7 +49,7 @@ contract HoloSale is Ownable, Pausable{
     uint256 supply;
     // The number of units sold on this day
     uint256 sold;
-    // We are storing how much fuel each users has bought per day
+    // We are storing how much fuel each user has bought per day
     // to be able to apply our relative cap per user per day
     // (i.e. nobody is allowed to buy more than 10% of each day's supply)
     mapping(address => uint256) fuelBoughtByAddress;
