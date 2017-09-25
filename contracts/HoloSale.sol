@@ -49,6 +49,10 @@ contract HoloSale is Ownable, Pausable{
     uint256 supply;
     // The number of units sold on this day
     uint256 sold;
+    // We are storing how much fuel each users has bought per day
+    // to be able to apply our relative cap per user per day
+    // (i.e. nobody is allowed to buy more than 10% of each day's supply)
+    mapping(address => uint256) fuelBoughtByAddress;
   }
 
   // Growing list of days
@@ -137,7 +141,7 @@ contract HoloSale is Ownable, Pausable{
     require(beneficiary != 0x0);
     require(withinPeriod());
     require(msg.value > minimumAmoutWei);
-    require(lessThanMaxRatio(amountOfHolosAsked, today));
+    require(lessThanMaxRatio(beneficiary, amountOfHolosAsked, today));
     require(lessThanSupply(amountOfHolosAsked, today));
 
     // Everything fine if we're here
@@ -147,6 +151,7 @@ contract HoloSale is Ownable, Pausable{
     receiptContract.mint(beneficiary, amountOfHolosAsked);
     // Log this sale
     today.sold = today.sold.add(amountOfHolosAsked);
+    today.fuelBoughtByAddress[beneficiary] = today.fuelBoughtByAddress[beneficiary].add(amountOfHolosAsked);
     ReceiptsCreated(beneficiary, msg.value, amountOfHolosAsked);
   }
 
@@ -157,8 +162,9 @@ contract HoloSale is Ownable, Pausable{
   }
 
   // Returns true if amount is not above the maximum share one could buy today
-  function lessThanMaxRatio(uint256 amount, Day today) internal returns (bool) {
-    return (amount * 100 / maximumPercentageOfDaysSupply <= today.supply);
+  function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal returns (bool) {
+    uint256 boughtTodayBefore = today.fuelBoughtByAddress[beneficiary];
+    return ((boughtTodayBefore + amount) * 100 / maximumPercentageOfDaysSupply <= today.supply);
   }
 
   // Returns false if amount would buy more fuel than we can sell today
