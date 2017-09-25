@@ -37,7 +37,7 @@ contract('HoloSale', (accounts) => {
 
   beforeEach(async () => {
     let min = web3.toWei(100, 'finney')
-    let maxPercent = 10;
+    let maxPercent = 20;
     sale = await HoloSale.new(web3.eth.blockNumber + 10, web3.eth.blockNumber + 500, rate, min, maxPercent, wallet)
     supply_contract = await HoloSupply.new()
     receipt = await HoloReceipt.new()
@@ -184,9 +184,9 @@ contract('HoloSale', (accounts) => {
           })
         })
 
-        describe('with too much ETH (over 10% of supply)', () => {
-          let tenPercent = supply / 9
-          let amount = holoWeiToWei(tenPercent)
+        describe('with too much ETH (over 20% of supply)', () => {
+          let quarter = supply / 4
+          let amount = holoWeiToWei(quarter)
 
           contractShouldThrow('it should not accept the transaction', () => {
             return sale.buyFuel(buyer1, {value: amount})
@@ -251,9 +251,9 @@ contract('HoloSale', (accounts) => {
           })
         })
 
-        describe('with too much ETH (over 10% of supply)', () => {
-          let tenPercent = supply / 10
-          let amount = holoWeiToWei(tenPercent) + 100
+        describe('with too much ETH (over 20% of supply)', () => {
+          let quarter = supply / 4
+          let amount = holoWeiToWei(quarter) + 100
 
           contractShouldThrow('it should not accept the transaction', () => {
             return web3.eth.sendTransaction({
@@ -280,28 +280,34 @@ contract('HoloSale', (accounts) => {
         })
       })
 
-      describe('after 50% of day supply sold', () => {
+      describe('after 60% of day supply sold', () => {
         let walletBalanceBefore
+        let sixtyPercent
+        let supplyAvailableForSale
 
         beforeEach(async () => {
-          let supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
-          let tenPercent = supplyAvailableForSale.toNumber() / 10
-          let weiAmount = holoWeiToWei(tenPercent)
+          supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
+          let twentyPercent = supplyAvailableForSale.toNumber() / 5
+          let weiAmount = holoWeiToWei(twentyPercent)
           await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
           await sale.buyFuel(buyer2, {value: weiAmount, from: buyer2})
           await sale.buyFuel(buyer3, {value: weiAmount, from: buyer3})
-          await sale.buyFuel(buyer4, {value: weiAmount, from: buyer4})
-          await sale.buyFuel(buyer5, {value: weiAmount, from: buyer5})
+          sixtyPercent = new BigNumber(supply).times(6).dividedBy(10).toNumber()
+        })
+
+        contractShouldThrow('buyer1 should not be able to buy more fuel today because he got 20% already', () => {
+          let weiAmount = holoWeiToWei(supplyAvailableForSale.toNumber() / 10)
+          return sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
         })
 
         it('daily stats should show correct amount of sold receipts', async () => {
           let stats = await sale.statsByDay(0)
-          expect(stats[1].toNumber()).to.equal(supply / 2)
+          expect(stats[1].toNumber()).to.equal(sixtyPercent)
         })
 
         it('receipt contract should have minted the correct amount', async () => {
           let receiptMinted = await receipt.totalSupply()
-          expect(receiptMinted.toNumber()).to.equal(supply / 2)
+          expect(receiptMinted.toNumber()).to.equal(sixtyPercent)
         })
 
         it('update should create a new day and carry over non-sold fuel', async () => {
@@ -315,39 +321,57 @@ contract('HoloSale', (accounts) => {
           let day = await sale.currentDay.call()
           expect(day.toNumber()).to.equal(2)
           let stats = await sale.statsByDay(1)
-          // the new full supply plus half from yesterday
-          expect(stats[0].toNumber()).to.equal(supply*3/2)
+          // the new full supply plus 40% from yesterday
+          expect(stats[0].toNumber()).to.equal(supply*140/100)
           expect(stats[1].toNumber()).to.equal(0)
         })
 
-        describe('after 95% of day supply sold', () => {
+        describe('after 90% of day supply sold', () => {
+          let percent90
           beforeEach(async () => {
             let supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
+            let twentyPercent = supplyAvailableForSale.toNumber() / 5
             let tenPercent = supplyAvailableForSale.toNumber() / 10
-            let weiAmount = holoWeiToWei(tenPercent)
-            await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
-            await sale.buyFuel(buyer2, {value: weiAmount, from: buyer2})
-            await sale.buyFuel(buyer3, {value: weiAmount, from: buyer3})
+            let weiAmount = holoWeiToWei(twentyPercent)
             await sale.buyFuel(buyer4, {value: weiAmount, from: buyer4})
-            await sale.buyFuel(buyer5, {value: weiAmount / 2, from: buyer5})
+            weiAmount = holoWeiToWei(tenPercent)
+            await sale.buyFuel(buyer5, {value: weiAmount, from: buyer5})
+            percent90 = new BigNumber(supply).times(90).dividedBy(100).toNumber()
           })
 
           it('daily stats should show correct amount of sold receipts', async () => {
             let stats = await sale.statsByDay(0)
-            let percent95 = new BigNumber(supply).times(95).dividedBy(100)
-            expect(stats[1].toNumber()).to.equal(percent95.toNumber())
+            expect(stats[1].toNumber()).to.equal(percent90)
           })
 
           it('receipt contract should have minted the correct amount', async () => {
             let receiptMinted = await receipt.totalSupply()
-            let percent95 = new BigNumber(supply).times(95).dividedBy(100)
-            expect(receiptMinted.toNumber()).to.equal(percent95.toNumber())
+            expect(receiptMinted.toNumber()).to.equal(percent90)
           })
 
           contractShouldThrow('buyer should not be able to buy more than supply', () => {
-            let tenPercent = supply / 10
-            let amount = holoWeiToWei(tenPercent)
-            return sale.buyFuel(buyer4, {value: amount, from: buyer4})
+            let twentyPercent = supplyAvailableForSale.toNumber() / 5
+            let amount = holoWeiToWei(twentyPercent)
+            return sale.buyFuel(buyer6, {value: amount, from: buyer6})
+          })
+
+          describe('on the next day', () => {
+            beforeEach(async () => {
+              let supplyForSale = supply
+              let totalSupply = new BigNumber(supplyForSale).times(4).dividedBy(3)
+              await supply_contract.addTokens(totalSupply)
+              let _supplyForSale = await supply_contract.supplyAvailableForSale.call()
+              expect(_supplyForSale.toNumber()).to.equal(2*supplyForSale)
+              await sale.update({from: updater})
+            })
+
+            it('buyer1 should be able to buy fuel again', async () => {
+              let weiAmount = holoWeiToWei(supplyAvailableForSale.toNumber() / 10)
+              let fuelBefore = await receipt.balanceOf(buyer1)
+              await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
+              let fuelAfter = await receipt.balanceOf(buyer1)
+              expect(fuelAfter.toNumber()).to.be.above(fuelBefore.toNumber())
+            })
           })
 
           describe('finalize', () => {
