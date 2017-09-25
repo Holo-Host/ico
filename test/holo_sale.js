@@ -295,7 +295,7 @@ contract('HoloSale', (accounts) => {
           sixtyPercent = new BigNumber(supply).times(6).dividedBy(10).toNumber()
         })
 
-        contractShouldThrow('buyer1 should not be able to buy more coins today because he got 20% already', () => {
+        contractShouldThrow('buyer1 should not be able to buy more fuel today because he got 20% already', () => {
           let weiAmount = holoWeiToWei(supplyAvailableForSale.toNumber() / 10)
           return sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
         })
