@@ -17,6 +17,7 @@
     "babel-preset-node6": "^11.0.0",
     "babel-preset-stage-2": "^6.24.1",
     "babel-register": "^6.24.1",
+    "bignumber.js": "^4.1.0",
     "bluebird": "^3.5.0",
     "chai": "^4.1.2",
     "chai-http": "^3.0.0",
