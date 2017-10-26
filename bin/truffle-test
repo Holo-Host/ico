@@ -1,0 +1,14 @@
+#!/usr/bin/env coffee
+
+{ exec } = require 'shelljs'
+
+print = (text, logger) ->
+  text = text.replace(/[\r\n]+$/, '')
+  text = text.replace(/\u001b\[0m      \s*Contract:\s*\u001b\[0m/, '')
+  logger(text) if text.trim()
+
+command = "truffle test --compile-all"
+testRun = exec(command, {async: true, silent: true})
+testRun.stdout.on 'data', (data) -> print(data, console.log)
+testRun.stderr.on 'data', (data) -> print(data, console.error)
+testRun.on 'close', (code) -> process.exit code
