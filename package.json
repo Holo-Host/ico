@@ -23,7 +23,8 @@
     "chai-http": "^3.0.0",
     "coffee-script": "^1.12.7",
     "lightsaber": "^0.6.10",
-    "mocha": "^3.5.2"
+    "mocha": "^3.5.2",
+    "shelljs": "^0.7.8"
   },
   "dependencies": {
     "zeppelin-solidity": "^1.2.0"
