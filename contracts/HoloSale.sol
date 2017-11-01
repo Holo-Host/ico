@@ -1,7 +1,7 @@
 pragma solidity ^0.4.15;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "./HoloReceipt.sol";
+import "./HoloCredits.sol";
 import "./HoloSupply.sol";
 
 // This contract is a crowdsale based on Zeppelin's Crowdsale.sol but with
@@ -32,7 +32,7 @@ contract HoloSale is Ownable, Pausable{
   address public wallet;
 
   // The token being minted on sale
-  HoloReceipt private receiptContract;
+  HoloCredits private tokenContract;
   // The contract to read amount of available fuel from
   HoloSupply private supplyContract;
 
@@ -58,7 +58,7 @@ contract HoloSale is Ownable, Pausable{
   // Growing list of days
   Day[] public statsByDay;
 
-  event ReceiptsCreated(address beneficiary, uint256 amountWei, uint256 amountHolos);
+  event CreditsCreated(address beneficiary, uint256 amountWei, uint256 amountHolos);
 
 
   modifier onlyUpdater {
@@ -66,7 +66,7 @@ contract HoloSale is Ownable, Pausable{
     _;
   }
 
-  // Converts wei to smallest fraction of Holo tokens.
+  // Converts wei to smallest fraction of Holo credits.
   // 'rate' is meant to give the factor between weis and full Holo tokens,
   // hence the division by 10^18.
   function holosForWei(uint256 amountWei) internal constant returns (uint256) {
@@ -111,8 +111,8 @@ contract HoloSale is Ownable, Pausable{
     supplyContract = _supplyContract;
   }
 
-  function setReceiptContract(HoloReceipt _receiptContract) onlyOwner {
-    receiptContract = _receiptContract;
+  function setTokenContract(HoloCredits _tokenContract) onlyOwner {
+    tokenContract = _tokenContract;
   }
 
   function currentDay() returns (uint) {
@@ -148,11 +148,11 @@ contract HoloSale is Ownable, Pausable{
     // Send ETH to our wallet
     wallet.transfer(msg.value);
     // Mint receipts
-    receiptContract.mint(beneficiary, amountOfHolosAsked);
+    tokenContract.mint(beneficiary, amountOfHolosAsked);
     // Log this sale
     today.sold = today.sold.add(amountOfHolosAsked);
     today.fuelBoughtByAddress[beneficiary] = today.fuelBoughtByAddress[beneficiary].add(amountOfHolosAsked);
-    ReceiptsCreated(beneficiary, msg.value, amountOfHolosAsked);
+    CreditsCreated(beneficiary, msg.value, amountOfHolosAsked);
   }
 
   // Returns true if we are in the live period of the sale
@@ -179,7 +179,7 @@ contract HoloSale is Ownable, Pausable{
 
   function update() onlyUpdater {
     // unsoldTokens is the amount of tokens (*10^18) that we can sell today
-    uint256 unsoldTokens = supplyContract.supplyAvailableForSale() - receiptContract.totalSupply();
+    uint256 unsoldTokens = supplyContract.supplyAvailableForSale() - tokenContract.totalSupply();
     statsByDay.push(Day(unsoldTokens, 0));
   }
 
@@ -199,10 +199,10 @@ contract HoloSale is Ownable, Pausable{
   function finalize() onlyOwner {
     require(!finalized);
     require(hasEnded());
-    uint256 receiptsMinted = receiptContract.totalSupply();
+    uint256 receiptsMinted = tokenContract.totalSupply();
     uint256 shareForTheTeam = receiptsMinted / 3;
-    receiptContract.mint(wallet, shareForTheTeam);
-    receiptContract.finishMinting();
+    tokenContract.mint(wallet, shareForTheTeam);
+    tokenContract.finishMinting();
     finalized = true;
   }
 }

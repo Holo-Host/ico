@@ -3,7 +3,7 @@ var BigNumber = require('bignumber.js');
 
 const HoloSale = artifacts.require('./HoloSale.sol')
 const HoloSupply = artifacts.require('./HoloSupply.sol')
-const HoloReceipt = artifacts.require('./HoloReceipt.sol')
+const HoloCredits = artifacts.require('./HoloCredits.sol')
 
 import {
   contractShouldThrow,
@@ -22,7 +22,7 @@ contract('HoloSale', (accounts) => {
   let buyer6 = accounts[7]
   let sale
   let supply_contract
-  let receipt
+  let token
 
   // we get 10 Holos per 1 ETH
   let rate = web3.toWei(10, 'ether')/1
@@ -40,10 +40,10 @@ contract('HoloSale', (accounts) => {
     let maxPercent = 20;
     sale = await HoloSale.new(web3.eth.blockNumber + 10, web3.eth.blockNumber + 500, rate, min, maxPercent, wallet)
     supply_contract = await HoloSupply.new()
-    receipt = await HoloReceipt.new()
-    await receipt.setMinter(sale.address)
+    token = await HoloCredits.new()
+    await token.setMinter(sale.address)
     await sale.setSupplyContract(supply_contract.address)
-    await sale.setReceiptContract(receipt.address)
+    await sale.setTokenContract(token.address)
     await sale.setUpdater(updater)
   })
 
@@ -133,12 +133,12 @@ contract('HoloSale', (accounts) => {
           })
 
           it('should have created the correct amount of Holo Receipts', async () => {
-            let amountReceipts = await receipt.balanceOf(buyer1)
+            let amountReceipts = await token.balanceOf(buyer1)
             expect(amountReceipts.toNumber()).to.equal(weiToHoloWei(amount))
           })
 
           it('should have created an event', async () => {
-            let log = await firstEvent(sale.ReceiptsCreated())
+            let log = await firstEvent(sale.CreditsCreated())
             expect(log.args.beneficiary).to.equal(buyer1)
             expect(log.args.amountWei.toNumber()).to.equal(amount)
             expect(log.args.amountHolos.toNumber()).to.equal(weiToHoloWei(amount))
@@ -300,14 +300,14 @@ contract('HoloSale', (accounts) => {
           return sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
         })
 
-        it('daily stats should show correct amount of sold receipts', async () => {
+        it('daily stats should show correct amount of sold credits', async () => {
           let stats = await sale.statsByDay(0)
           expect(stats[1].toNumber()).to.equal(sixtyPercent)
         })
 
-        it('receipt contract should have minted the correct amount', async () => {
-          let receiptMinted = await receipt.totalSupply()
-          expect(receiptMinted.toNumber()).to.equal(sixtyPercent)
+        it('token contract should have minted the correct amount', async () => {
+          let creditsMinted = await token.totalSupply()
+          expect(creditsMinted.toNumber()).to.equal(sixtyPercent)
         })
 
         it('update should create a new day and carry over non-sold fuel', async () => {
@@ -339,14 +339,14 @@ contract('HoloSale', (accounts) => {
             percent90 = new BigNumber(supply).times(90).dividedBy(100).toNumber()
           })
 
-          it('daily stats should show correct amount of sold receipts', async () => {
+          it('daily stats should show correct amount of sold credits', async () => {
             let stats = await sale.statsByDay(0)
             expect(stats[1].toNumber()).to.equal(percent90)
           })
 
-          it('receipt contract should have minted the correct amount', async () => {
-            let receiptMinted = await receipt.totalSupply()
-            expect(receiptMinted.toNumber()).to.equal(percent90)
+          it('token contract should have minted the correct amount', async () => {
+            let creditsMinted = await token.totalSupply()
+            expect(creditsMinted.toNumber()).to.equal(percent90)
           })
 
           contractShouldThrow('buyer should not be able to buy more than supply', () => {
@@ -367,9 +367,9 @@ contract('HoloSale', (accounts) => {
 
             it('buyer1 should be able to buy fuel again', async () => {
               let weiAmount = holoWeiToWei(supplyAvailableForSale.toNumber() / 10)
-              let fuelBefore = await receipt.balanceOf(buyer1)
+              let fuelBefore = await token.balanceOf(buyer1)
               await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
-              let fuelAfter = await receipt.balanceOf(buyer1)
+              let fuelAfter = await token.balanceOf(buyer1)
               expect(fuelAfter.toNumber()).to.be.above(fuelBefore.toNumber())
             })
           })
@@ -385,15 +385,15 @@ contract('HoloSale', (accounts) => {
                 await sale.setUpdater(updater);
               }
 
-              let mintingFinished = await receipt.mintingFinished.call()
+              let mintingFinished = await token.mintingFinished.call()
               expect(mintingFinished).to.equal(false)
 
               await sale.finalize()
 
-              let teamBalance = await receipt.balanceOf(wallet)
-              let allTokens = await receipt.totalSupply()
+              let teamBalance = await token.balanceOf(wallet)
+              let allTokens = await token.totalSupply()
               expect(teamBalance.toNumber()).to.equal(new BigNumber(allTokens).times(25).dividedBy(100).toNumber())
-              mintingFinished = await receipt.mintingFinished.call()
+              mintingFinished = await token.mintingFinished.call()
               expect(mintingFinished).to.equal(true)
             })
 
