@@ -98,3 +98,66 @@ on testrpc's testing blockchain by running:
 Then run the tests with:
 
 ```truffle test```
+
+
+## Oyente output:
+```
+$ oyente -s all.sol
+WARNING:root:You are using an untested version of z3. 4.5.0 is the officially tested version
+WARNING:root:You are using evm version 1.7.2. The supported version is 1.6.6
+WARNING:root:You are using solc version 0.4.18, The latest supported version is 0.4.17
+INFO:root:Contract all.sol:HoloCredits:
+INFO:oyente.symExec:Running, please wait...
+INFO:oyente.symExec:	============ Results ===========
+INFO:oyente.symExec:	  EVM code coverage: 	 100.0%
+INFO:oyente.symExec:	  Callstack bug: 	 False
+INFO:oyente.symExec:	  Money concurrency bug: False
+INFO:oyente.symExec:	  Time dependency bug: 	 False
+INFO:oyente.symExec:	  Reentrancy bug: 	 False
+INFO:root:Contract all.sol:HoloSale:
+INFO:oyente.symExec:Running, please wait...
+INFO:oyente.symExec:	============ Results ===========
+INFO:oyente.symExec:	  EVM code coverage: 	 84.4%
+INFO:oyente.symExec:	  Callstack bug: 	 False
+INFO:oyente.symExec:	  Money concurrency bug: False
+INFO:oyente.symExec:	  Time dependency bug: 	 False
+INFO:oyente.symExec:	  Reentrancy bug: 	 False
+INFO:root:Contract all.sol:HoloSupply:
+INFO:oyente.symExec:Running, please wait...
+INFO:oyente.symExec:	============ Results ===========
+INFO:oyente.symExec:	  EVM code coverage: 	 99.6%
+INFO:oyente.symExec:	  Callstack bug: 	 False
+INFO:oyente.symExec:	  Money concurrency bug: False
+INFO:oyente.symExec:	  Time dependency bug: 	 False
+INFO:oyente.symExec:	  Reentrancy bug: 	 False
+INFO:root:Contract all.sol:Ownable:
+INFO:oyente.symExec:Running, please wait...
+INFO:oyente.symExec:	============ Results ===========
+INFO:oyente.symExec:	  EVM code coverage: 	 99.4%
+INFO:oyente.symExec:	  Callstack bug: 	 False
+INFO:oyente.symExec:	  Money concurrency bug: False
+INFO:oyente.symExec:	  Time dependency bug: 	 False
+INFO:oyente.symExec:	  Reentrancy bug: 	 False
+INFO:root:Contract all.sol:Pausable:
+INFO:oyente.symExec:Running, please wait...
+INFO:oyente.symExec:	============ Results ===========
+INFO:oyente.symExec:	  EVM code coverage: 	 99.8%
+INFO:oyente.symExec:	  Callstack bug: 	 False
+INFO:oyente.symExec:	  Money concurrency bug: False
+INFO:oyente.symExec:	  Time dependency bug: 	 False
+INFO:oyente.symExec:	  Reentrancy bug: 	 False
+INFO:root:Contract all.sol:SafeMath:
+INFO:oyente.symExec:Running, please wait...
+INFO:oyente.symExec:	============ Results ===========
+INFO:oyente.symExec:	  EVM code coverage: 	 100.0%
+INFO:oyente.symExec:	  Callstack bug: 	 False
+INFO:oyente.symExec:	  Money concurrency bug: False
+INFO:oyente.symExec:	  Time dependency bug: 	 False
+INFO:oyente.symExec:	  Reentrancy bug: 	 False
+INFO:oyente.symExec:	====== Analysis Completed ======
+INFO:oyente.symExec:	====== Analysis Completed ======
+INFO:oyente.symExec:	====== Analysis Completed ======
+INFO:oyente.symExec:	====== Analysis Completed ======
+INFO:oyente.symExec:	====== Analysis Completed ======
+INFO:oyente.symExec:	====== Analysis Completed ======
+```
