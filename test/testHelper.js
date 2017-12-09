@@ -10,7 +10,7 @@ export const contractShouldThrow = (description, functionToCall, options, expect
     ).then(() => {
       throw new Error('Expected solidity error to be thrown from contract, but was not')
     }).catch((error) => {
-      expectedErrorMessage = expectedErrorMessage || 'VM Exception while processing transaction: invalid opcode'
+      expectedErrorMessage = expectedErrorMessage || /VM Exception while processing transaction: revert|VM Exception while processing transaction: invalid opcode/
       if (!error.message || error.message.search(expectedErrorMessage) < 0) throw error
     }).then(done).catch(done)
   }, options)
@@ -22,7 +22,7 @@ export const contractShouldThrowOnly = (description, functionToCall) => {
 
 export const contractShouldThrowIfEtherSent = (functionToCall, opts) => {
   contractShouldThrow('should throw an error if ether is sent', functionToCall, opts,
-    /Cannot send value to non-payable function|VM Exception while executing eth_call: invalid opcode/)
+    /Cannot send value to non-payable function|VM Exception while processing transaction: invalid opcode|VM Exception while processing transaction: revert/)
 }
 
 export const contractShouldThrowIfEtherSentOnly = (functionToCall) => {

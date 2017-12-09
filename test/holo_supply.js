@@ -50,7 +50,7 @@ contract('HoloSupply', function(accounts) {
         oldUpater = updater
         return instance.setUpdater(accounts[2], {from: accounts[2]})
       }).catch((error) => {
-        if (!error.message || error.message.search('VM Exception while processing transaction: invalid opcode') < 0) throw error
+        if (!error.message || error.message.search('VM Exception while processing transaction: revert') < 0) throw error
       }).then(() => {
         return instance.updater()
       }).then((updater) => {
