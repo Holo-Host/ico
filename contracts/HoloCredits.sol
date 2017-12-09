@@ -170,8 +170,8 @@ contract HoloCredits is Ownable {
 
   function burn(uint256 _amount) onlyDestroyer {
     require(balances[destroyer] >= _amount && _amount > 0);
-    balances[destroyer] -= _amount;
-    totalSupply -= _amount;
+    balances[destroyer] = balances[destroyer].sub(_amount);
+    totalSupply = totalSupply.sub(_amount);
     Burn(_amount);
   }
 }

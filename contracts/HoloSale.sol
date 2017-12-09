@@ -165,7 +165,7 @@ contract HoloSale is Ownable, Pausable{
   // the maximum share one could buy today
   function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal returns (bool) {
     uint256 boughtTodayBefore = today.fuelBoughtByAddress[beneficiary];
-    return ((boughtTodayBefore + amount) * 100 / maximumPercentageOfDaysSupply <= today.supply);
+    return (boughtTodayBefore.add(amount).mul(100).div(maximumPercentageOfDaysSupply) <= today.supply);
   }
 
   // Returns false if amount would buy more fuel than we can sell today
@@ -200,7 +200,7 @@ contract HoloSale is Ownable, Pausable{
     require(!finalized);
     require(hasEnded());
     uint256 receiptsMinted = tokenContract.totalSupply();
-    uint256 shareForTheTeam = receiptsMinted / 3;
+    uint256 shareForTheTeam = receiptsMinted.div(3);
     tokenContract.mint(wallet, shareForTheTeam);
     tokenContract.finishMinting();
     finalized = true;
