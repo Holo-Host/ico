@@ -1,7 +1,7 @@
 pragma solidity ^0.4.15;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "./HoloCredits.sol";
+import "./HoloToken.sol";
 import "./HoloWhitelist.sol";
 
 // This contract is a crowdsale based on Zeppelin's Crowdsale.sol but with
@@ -32,7 +32,7 @@ contract HoloSale is Ownable, Pausable{
   address public wallet;
 
   // The token being minted on sale
-  HoloCredits private tokenContract;
+  HoloToken private tokenContract;
   // The contract to check beneficiaries' address against
   // and to hold number of reserved tokens per day
   HoloWhitelist private whitelistContract;
@@ -73,7 +73,7 @@ contract HoloSale is Ownable, Pausable{
     _;
   }
 
-  // Converts wei to smallest fraction of Holo credits.
+  // Converts wei to smallest fraction of Holo tokens.
   // 'rate' is meant to give the factor between weis and full Holo tokens,
   // hence the division by 10^18.
   function holosForWei(uint256 amountWei) internal constant returns (uint256) {
@@ -114,7 +114,7 @@ contract HoloSale is Ownable, Pausable{
     updater = _updater;
   }
 
-  function setTokenContract(HoloCredits _tokenContract) onlyOwner {
+  function setTokenContract(HoloToken _tokenContract) onlyOwner {
     tokenContract = _tokenContract;
   }
 

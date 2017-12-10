@@ -2,7 +2,7 @@ import {expect} from 'chai'
 var BigNumber = require('bignumber.js');
 
 const HoloSale = artifacts.require('./HoloSale.sol')
-const HoloCredits = artifacts.require('./HoloCredits.sol')
+const HoloToken = artifacts.require('./HoloToken.sol')
 const HoloWhitelist = artifacts.require('./HoloWhitelist.sol')
 
 import {
@@ -40,7 +40,7 @@ contract('HoloSale', (accounts) => {
     let min = web3.toWei(100, 'finney')
     let maxPercent = 20;
     sale = await HoloSale.new(web3.eth.blockNumber + 10, web3.eth.blockNumber + 500, rate, min, maxPercent, wallet)
-    token = await HoloCredits.new()
+    token = await HoloToken.new()
     whitelist_contract = await HoloWhitelist.new()
     await token.setMinter(sale.address)
     await sale.setTokenContract(token.address)

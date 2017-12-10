@@ -1,7 +1,7 @@
 import {expect} from 'chai'
 import {d} from 'lightsaber'
 
-const HoloCredits = artifacts.require('./HoloCredits.sol')
+const HoloToken = artifacts.require('./HoloToken.sol')
 
 import {
   contractIt,
@@ -17,7 +17,7 @@ import {
   firstEvent
 } from './testHelper'
 
-contract('HoloCredits', (accounts) => {
+contract('HoloToken', (accounts) => {
   let anyone = accounts[5]
   let token
 
@@ -50,7 +50,7 @@ contract('HoloCredits', (accounts) => {
   }
 
   beforeEach(async () => {
-    token = await HoloCredits.deployed()
+    token = await HoloToken.deployed()
     await token.setMinter(accounts[0])
   })
 
@@ -117,7 +117,7 @@ contract('HoloCredits', (accounts) => {
         Promise.resolve().then(() => {
           return token.name.call()
         }).then((name) => {
-          expect(name).to.equal('Holo Hosting Credits')
+          expect(name).to.equal('HoloToken')
           return
         }).then(done).catch(done)
       })
@@ -128,7 +128,7 @@ contract('HoloCredits', (accounts) => {
         Promise.resolve().then(() => {
           return token.symbol.call()
         }).then((symbol) => {
-          expect(symbol).to.equal('HOLO')
+          expect(symbol).to.equal('HOT')
           return
         }).then(done).catch(done)
       })
@@ -151,7 +151,7 @@ contract('HoloCredits', (accounts) => {
         })
 
 
-        contractIt('should transfer creditss from contract owner to a receiver', async () => {
+        contractIt('should transfer tokens from contract owner to a receiver', async () => {
           let starting = await getUsers(token)
           await token.transfer(starting.bob.address, 5, {from: starting.alice.address})
           let ending = await getUsers(token)
@@ -160,7 +160,7 @@ contract('HoloCredits', (accounts) => {
           expect(ending.bob.balance).to.equal(5)
         })
 
-        contractIt('should transfer creditss from user to a user', async () => {
+        contractIt('should transfer tokens from user to a user', async () => {
           let starting = await getUsers(token)
           await token.transfer(starting.bob.address, 5, {from: starting.alice.address})
           await token.transfer(starting.charlie.address, 5, {from: starting.bob.address})
@@ -181,7 +181,7 @@ contract('HoloCredits', (accounts) => {
           expect(log.args.value.toNumber()).to.equal(5)
         })
 
-        contractShouldThrow("should throw if sender does not have enough credits", async () => {
+        contractShouldThrow("should throw if sender does not have enough token", async () => {
           var users = await getUsers(token)
           return token.transfer(users.alice.address, 10, {from: users.bob.address})
         })
@@ -477,7 +477,7 @@ contract('HoloCredits', (accounts) => {
         assert(false)
       })
 
-      contractIt('destroyer can burn their credits', async () => {
+      contractIt('destroyer can burn their token', async () => {
         let bob = accounts[1]
         await token.mint(bob, 11)
         let totalSupply = await token.totalSupply.call()
@@ -491,7 +491,7 @@ contract('HoloCredits', (accounts) => {
         expect(totalSupply.toNumber()).to.equal(1)
       })
 
-      contractShouldThrow('burns no credits if amount is greater than credits available', async (done) => {
+      contractShouldThrow('burns no token if amount is greater than token available', async (done) => {
         let bob = accounts[1]
         await token.mint(bob, 1)
         let totalSupply = await token.totalSupply.call()
@@ -526,7 +526,7 @@ contract('HoloCredits', (accounts) => {
         return token.mint(accounts[1], 5, {from: accounts[1]})
       })
 
-      it('should create credits', async () => {
+      it('should create token', async () => {
         let before = await token.balanceOf(accounts[1])
         await token.mint(accounts[1], 5)
         let after = await token.balanceOf(accounts[1])
