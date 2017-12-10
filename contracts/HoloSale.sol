@@ -2,7 +2,6 @@ pragma solidity ^0.4.15;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./HoloCredits.sol";
-import "./HoloSupply.sol";
 
 // This contract is a crowdsale based on Zeppelin's Crowdsale.sol but with
 // several changes:
@@ -33,8 +32,6 @@ contract HoloSale is Ownable, Pausable{
 
   // The token being minted on sale
   HoloCredits private tokenContract;
-  // The contract to read amount of available fuel from
-  HoloSupply private supplyContract;
 
   // The account that is allowed to call update()
   // which will happen once per day during the sale period
@@ -42,6 +39,8 @@ contract HoloSale is Ownable, Pausable{
 
   // Will be set to true by finalize()
   bool private finalized = false;
+
+  uint256 public totalSupply;
 
   // For every day of the sale we store one instance of this struct
   struct Day {
@@ -107,16 +106,20 @@ contract HoloSale is Ownable, Pausable{
     updater = _updater;
   }
 
-  function setSupplyContract(HoloSupply _supplyContract) onlyOwner {
-    supplyContract = _supplyContract;
-  }
-
   function setTokenContract(HoloCredits _tokenContract) onlyOwner {
     tokenContract = _tokenContract;
   }
 
   function currentDay() returns (uint) {
     return statsByDay.length;
+  }
+
+  function todaysSupply() returns (uint) {
+    return statsByDay[currentDay()-1].supply;
+  }
+
+  function todaySold() returns (uint) {
+    return statsByDay[currentDay()-1].sold;
   }
 
   //---------------------------------------------------------------------------
@@ -177,10 +180,12 @@ contract HoloSale is Ownable, Pausable{
   // Update
   //---------------------------------------------------------------------------
 
-  function update() onlyUpdater {
+
+  function update(uint256 newTotalSupply) onlyUpdater {
+    totalSupply = newTotalSupply;
     // unsoldTokens is the amount of tokens (*10^18) that we can sell today
-    uint256 unsoldTokens = supplyContract.supplyAvailableForSale() - tokenContract.totalSupply();
-    statsByDay.push(Day(unsoldTokens, 0));
+    uint256 daysSupply = newTotalSupply - tokenContract.totalSupply();
+    statsByDay.push(Day(daysSupply, 0));
   }
 
   //---------------------------------------------------------------------------

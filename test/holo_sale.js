@@ -2,7 +2,6 @@ import {expect} from 'chai'
 var BigNumber = require('bignumber.js');
 
 const HoloSale = artifacts.require('./HoloSale.sol')
-const HoloSupply = artifacts.require('./HoloSupply.sol')
 const HoloCredits = artifacts.require('./HoloCredits.sol')
 
 import {
@@ -21,7 +20,6 @@ contract('HoloSale', (accounts) => {
   let buyer5 = accounts[6]
   let buyer6 = accounts[7]
   let sale
-  let supply_contract
   let token
 
   // we get 10 Holos per 1 ETH
@@ -39,10 +37,8 @@ contract('HoloSale', (accounts) => {
     let min = web3.toWei(100, 'finney')
     let maxPercent = 20;
     sale = await HoloSale.new(web3.eth.blockNumber + 10, web3.eth.blockNumber + 500, rate, min, maxPercent, wallet)
-    supply_contract = await HoloSupply.new()
     token = await HoloCredits.new()
     await token.setMinter(sale.address)
-    await sale.setSupplyContract(supply_contract.address)
     await sale.setTokenContract(token.address)
     await sale.setUpdater(updater)
   })
@@ -95,11 +91,11 @@ contract('HoloSale', (accounts) => {
 
     describe('update()', () => {
       contractShouldThrow('should throw if called by non-updater', () => {
-        return sale.update()
+        return sale.update(0)
       })
 
       it('should not throw when called by updater', () => {
-        return sale.update({from: updater})
+        return sale.update(0,{from: updater})
       })
     })
 
@@ -108,12 +104,7 @@ contract('HoloSale', (accounts) => {
       let supply = web3.toWei(30, 'ether') / 1
 
       beforeEach(async () => {
-        let supplyForSale = supply
-        let totalSupply = new BigNumber(supplyForSale).times(4).dividedBy(3)
-        await supply_contract.addTokens(totalSupply)
-        let _supplyForSale = await supply_contract.supplyAvailableForSale.call()
-        expect(_supplyForSale.toNumber()).to.equal(supplyForSale)
-        await sale.update({from: updater})
+        await sale.update(supply, {from: updater})
       })
 
       it('stats should contain the first day', async () => {
@@ -122,6 +113,16 @@ contract('HoloSale', (accounts) => {
         let stats = await sale.statsByDay(0)
         expect(stats[0].toNumber()).to.equal(supply)
         expect(stats[1].toNumber()).to.equal(0)
+      })
+
+      it('todaysSupply() should be correct', async () => {
+        let todaysSupply = await sale.todaysSupply.call()
+        expect(todaysSupply.toNumber()).to.equal(supply)
+      })
+
+      it('todaySold() should start off with 0', async () => {
+        let todaySold = await sale.todaySold.call()
+        expect(todaySold.toNumber()).to.equal(0)
       })
 
       let buyFuel = (amount) => {
@@ -286,7 +287,7 @@ contract('HoloSale', (accounts) => {
         let supplyAvailableForSale
 
         beforeEach(async () => {
-          supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
+          supplyAvailableForSale = await sale.totalSupply.call()
           let twentyPercent = supplyAvailableForSale.toNumber() / 5
           let weiAmount = holoWeiToWei(twentyPercent)
           await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
@@ -305,6 +306,16 @@ contract('HoloSale', (accounts) => {
           expect(stats[1].toNumber()).to.equal(sixtyPercent)
         })
 
+        it('todaysSupply should not be changed', async () => {
+          let todaysSupply = await sale.todaysSupply.call()
+          expect(todaysSupply.toNumber()).to.equal(supply)
+        })
+
+        it('todaySold should return those 60%', async () => {
+          let todaySold = await sale.todaySold.call()
+          expect(todaySold.toNumber()).to.equal(sixtyPercent)
+        })
+
         it('token contract should have minted the correct amount', async () => {
           let creditsMinted = await token.totalSupply()
           expect(creditsMinted.toNumber()).to.equal(sixtyPercent)
@@ -312,12 +323,7 @@ contract('HoloSale', (accounts) => {
 
         it('update should create a new day and carry over non-sold fuel', async () => {
           // double available fuel
-          let totalSupply = await supply_contract.totalSupply()
-          await supply_contract.addTokens(totalSupply)
-          let supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
-          expect(supplyAvailableForSale.toNumber()).to.equal(2*supply)
-          //assert(await supply_contract.supplyAvailableForSale() == 2*supply)
-          await sale.update({from: updater})
+          await sale.update(supply * 2, {from: updater})
           let day = await sale.currentDay.call()
           expect(day.toNumber()).to.equal(2)
           let stats = await sale.statsByDay(1)
@@ -329,7 +335,7 @@ contract('HoloSale', (accounts) => {
         describe('after 90% of day supply sold', () => {
           let percent90
           beforeEach(async () => {
-            let supplyAvailableForSale = await supply_contract.supplyAvailableForSale.call()
+            let supplyAvailableForSale = await sale.totalSupply.call()
             let twentyPercent = supplyAvailableForSale.toNumber() / 5
             let tenPercent = supplyAvailableForSale.toNumber() / 10
             let weiAmount = holoWeiToWei(twentyPercent)
@@ -355,14 +361,9 @@ contract('HoloSale', (accounts) => {
             return sale.buyFuel(buyer6, {value: amount, from: buyer6})
           })
 
-          describe('on the next day', () => {
+          describe('on the next day with more supply', () => {
             beforeEach(async () => {
-              let supplyForSale = supply
-              let totalSupply = new BigNumber(supplyForSale).times(4).dividedBy(3)
-              await supply_contract.addTokens(totalSupply)
-              let _supplyForSale = await supply_contract.supplyAvailableForSale.call()
-              expect(_supplyForSale.toNumber()).to.equal(2*supplyForSale)
-              await sale.update({from: updater})
+              await sale.update(supply * 3, {from: updater})
             })
 
             it('buyer1 should be able to buy fuel again', async () => {
