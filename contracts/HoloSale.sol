@@ -48,10 +48,14 @@ contract HoloSale is Ownable, Pausable{
 
   // For every day of the sale we store one instance of this struct
   struct Day {
-    // The supply available to sell on a given day
+    // The supply available to sell on this day
     uint256 supply;
-    // The number of units sold on this day
-    uint256 sold;
+    // The number of unreserved tokens sold on this day
+    uint256 soldFromUnreserved;
+    // Number of tokens reserved today
+    uint256 reserved;
+    // Number of reserved tokens sold today
+    uint256 soldFromReserved;
     // We are storing how much fuel each user has bought per day
     // to be able to apply our relative cap per user per day
     // (i.e. nobody is allowed to buy more than 10% of each day's supply)
@@ -127,7 +131,11 @@ contract HoloSale is Ownable, Pausable{
   }
 
   function todaySold() returns (uint) {
-    return statsByDay[currentDay()-1].sold;
+    return statsByDay[currentDay()-1].soldFromUnreserved + statsByDay[currentDay()-1].soldFromReserved;
+  }
+
+  function todayReserved() returns (uint) {
+    return statsByDay[currentDay()-1].reserved;
   }
 
   //---------------------------------------------------------------------------
@@ -144,17 +152,48 @@ contract HoloSale is Ownable, Pausable{
   function buyFuel(address beneficiary) payable whenNotPaused{
     require(currentDay() > 0);
     require(whitelistContract.isWhitelisted(beneficiary));
+    require(beneficiary != 0x0);
+    require(withinPeriod());
 
-    // Get current day
-    Day storage today = statsByDay[statsByDay.length-1];
     // Calculate how many Holos this transaction would buy
     uint256 amountOfHolosAsked = holosForWei(msg.value);
 
-    require(beneficiary != 0x0);
-    require(withinPeriod());
-    require(msg.value > minimumAmoutWei);
-    require(lessThanMaxRatio(beneficiary, amountOfHolosAsked, today));
-    require(lessThanSupply(amountOfHolosAsked, today));
+    // Get current day
+    uint dayIndex = statsByDay.length-1;
+    Day storage today = statsByDay[dayIndex];
+
+    // Funders who took part in the crowdfund could have reserved tokens
+    uint256 reservedHolos = whitelistContract.reservedTokens(beneficiary, dayIndex);
+    // If they do, make sure to subtract what they bought already today
+    uint256 alreadyBought = today.fuelBoughtByAddress[beneficiary];
+    if(alreadyBought > reservedHolos) {
+      reservedHolos = 0;
+    } else {
+      reservedHolos = reservedHolos.sub(alreadyBought);
+    }
+
+    // Calculate if they asked more than they have reserved
+    uint256 askedMoreThanReserved;
+    uint256 useFromReserved;
+    if(amountOfHolosAsked > reservedHolos) {
+      askedMoreThanReserved = amountOfHolosAsked.sub(reservedHolos);
+      useFromReserved = reservedHolos;
+    } else {
+      askedMoreThanReserved = 0;
+      useFromReserved = amountOfHolosAsked;
+    }
+
+    if(reservedHolos == 0) {
+      // If this transaction is not claiming reserved tokens
+      // it has to be over the minimum.
+      // (Reserved tokens must be claimable even if it would be just few)
+      require(msg.value > minimumAmoutWei);
+    }
+
+    // The non-reserved tokens asked must not exceed the max-ratio
+    // nor the available supply.
+    require(lessThanMaxRatio(beneficiary, askedMoreThanReserved, today));
+    require(lessThanSupply(askedMoreThanReserved, today));
 
     // Everything fine if we're here
     // Send ETH to our wallet
@@ -162,7 +201,8 @@ contract HoloSale is Ownable, Pausable{
     // Mint receipts
     tokenContract.mint(beneficiary, amountOfHolosAsked);
     // Log this sale
-    today.sold = today.sold.add(amountOfHolosAsked);
+    today.soldFromUnreserved = today.soldFromUnreserved.add(askedMoreThanReserved);
+    today.soldFromReserved = today.soldFromReserved.add(useFromReserved);
     today.fuelBoughtByAddress[beneficiary] = today.fuelBoughtByAddress[beneficiary].add(amountOfHolosAsked);
     CreditsCreated(beneficiary, msg.value, amountOfHolosAsked);
   }
@@ -182,7 +222,7 @@ contract HoloSale is Ownable, Pausable{
 
   // Returns false if amount would buy more fuel than we can sell today
   function lessThanSupply(uint256 amount, Day today) internal returns (bool) {
-    return (today.sold.add(amount) <= today.supply);
+    return (today.soldFromUnreserved.add(amount) <= today.supply.sub(today.reserved));
   }
 
   //---------------------------------------------------------------------------
@@ -190,11 +230,11 @@ contract HoloSale is Ownable, Pausable{
   //---------------------------------------------------------------------------
 
 
-  function update(uint256 newTotalSupply) onlyUpdater {
+  function update(uint256 newTotalSupply, uint256 reservedTokensNextDay) onlyUpdater {
     totalSupply = newTotalSupply;
     // unsoldTokens is the amount of tokens (*10^18) that we can sell today
     uint256 daysSupply = newTotalSupply - tokenContract.totalSupply();
-    statsByDay.push(Day(daysSupply, 0));
+    statsByDay.push(Day(daysSupply, 0, reservedTokensNextDay, 0));
   }
 
   //---------------------------------------------------------------------------

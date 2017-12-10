@@ -96,11 +96,11 @@ contract('HoloSale', (accounts) => {
 
     describe('update()', () => {
       contractShouldThrow('should throw if called by non-updater', () => {
-        return sale.update(0)
+        return sale.update(0,0)
       })
 
       it('should not throw when called by updater', () => {
-        return sale.update(0,{from: updater})
+        return sale.update(0,0,{from: updater})
       })
     })
 
@@ -109,7 +109,7 @@ contract('HoloSale', (accounts) => {
       let supply = web3.toWei(30, 'ether') / 1
 
       beforeEach(async () => {
-        await sale.update(supply, {from: updater})
+        await sale.update(supply, 0, {from: updater})
       })
 
       it('stats should contain the first day', async () => {
@@ -128,6 +128,11 @@ contract('HoloSale', (accounts) => {
       it('todaySold() should start off with 0', async () => {
         let todaySold = await sale.todaySold.call()
         expect(todaySold.toNumber()).to.equal(0)
+      })
+
+      it('todayReserved() should be correct', async () => {
+        let todayReserved = await sale.todayReserved.call()
+        expect(todayReserved.toNumber()).to.equal(0)
       })
 
       let buyFuel = (amount, beneficiary = buyer1) => {
@@ -369,7 +374,7 @@ contract('HoloSale', (accounts) => {
 
         it('update should create a new day and carry over non-sold fuel', async () => {
           // double available fuel
-          await sale.update(supply * 2, {from: updater})
+          await sale.update(supply * 2, 0, {from: updater})
           let day = await sale.currentDay.call()
           expect(day.toNumber()).to.equal(2)
           let stats = await sale.statsByDay(1)
@@ -410,7 +415,7 @@ contract('HoloSale', (accounts) => {
 
           describe('on the next day with more supply', () => {
             beforeEach(async () => {
-              await sale.update(supply * 3, {from: updater})
+              await sale.update(supply * 3, 0, {from: updater})
             })
 
             it('buyer1 should be able to buy fuel again', async () => {
