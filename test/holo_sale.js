@@ -3,6 +3,7 @@ var BigNumber = require('bignumber.js');
 
 const HoloSale = artifacts.require('./HoloSale.sol')
 const HoloCredits = artifacts.require('./HoloCredits.sol')
+const HoloWhitelist = artifacts.require('./HoloWhitelist.sol')
 
 import {
   contractShouldThrow,
@@ -19,8 +20,10 @@ contract('HoloSale', (accounts) => {
   let buyer4 = accounts[5]
   let buyer5 = accounts[6]
   let buyer6 = accounts[7]
+  let anonymous = accounts[8]
   let sale
   let token
+  let whitelist_contract
 
   // we get 10 Holos per 1 ETH
   let rate = web3.toWei(10, 'ether')/1
@@ -38,8 +41,10 @@ contract('HoloSale', (accounts) => {
     let maxPercent = 20;
     sale = await HoloSale.new(web3.eth.blockNumber + 10, web3.eth.blockNumber + 500, rate, min, maxPercent, wallet)
     token = await HoloCredits.new()
+    whitelist_contract = await HoloWhitelist.new()
     await token.setMinter(sale.address)
     await sale.setTokenContract(token.address)
+    await sale.setWhitelistContract(whitelist_contract.address)
     await sale.setUpdater(updater)
   })
 
@@ -125,7 +130,7 @@ contract('HoloSale', (accounts) => {
         expect(todaySold.toNumber()).to.equal(0)
       })
 
-      let buyFuel = (amount) => {
+      let buyFuel = (amount, beneficiary = buyer1) => {
         return () => {
           it('should have added the amount of sold Holos to the stats', async () => {
             let stats = await sale.statsByDay(0)
@@ -134,13 +139,13 @@ contract('HoloSale', (accounts) => {
           })
 
           it('should have created the correct amount of Holo Receipts', async () => {
-            let amountReceipts = await token.balanceOf(buyer1)
+            let amountReceipts = await token.balanceOf(beneficiary)
             expect(amountReceipts.toNumber()).to.equal(weiToHoloWei(amount))
           })
 
           it('should have created an event', async () => {
             let log = await firstEvent(sale.CreditsCreated())
-            expect(log.args.beneficiary).to.equal(buyer1)
+            expect(log.args.beneficiary).to.equal(beneficiary)
             expect(log.args.amountWei.toNumber()).to.equal(amount)
             expect(log.args.amountHolos.toNumber()).to.equal(weiToHoloWei(amount))
           })
@@ -153,93 +158,90 @@ contract('HoloSale', (accounts) => {
       }
 
       describe('buyTokens()', () => {
-        describe('with the right amount of ETH', () => {
-          let amount = holoWeiToWei(supply / 20)
-
-          beforeEach(async () => {
-            walletBalanceBefore = await web3.eth.getBalance(wallet)
-            return sale.buyFuel(buyer1, {value: amount})
-          })
-
-          describe('[should do sale]', buyFuel(amount))
-        })
-
-        describe('when paused', () => {
-          let amount = holoWeiToWei(supply / 20)
+        describe('when whitelisted', () => {
           beforeEach(() => {
-            return sale.pause()
+            return whitelist_contract.whitelist([buyer1])
           })
 
-          contractShouldThrow('it should not work even when amount is right', () => {
-            return sale.buyFuel(buyer1, {value: amount})
-          })
+          describe('with the right amount of ETH', () => {
+            let amount = holoWeiToWei(supply / 20)
 
-          describe('one should be able to unpause', () => {
             beforeEach(async () => {
-              await sale.unpause()
               walletBalanceBefore = await web3.eth.getBalance(wallet)
               return sale.buyFuel(buyer1, {value: amount})
             })
 
             describe('[should do sale]', buyFuel(amount))
           })
-        })
 
-        describe('with too much ETH (over 20% of supply)', () => {
-          let quarter = supply / 4
-          let amount = holoWeiToWei(quarter)
+          describe('when paused', () => {
+            let amount = holoWeiToWei(supply / 20)
+            beforeEach(() => {
+              return sale.pause()
+            })
 
-          contractShouldThrow('it should not accept the transaction', () => {
-            return sale.buyFuel(buyer1, {value: amount})
+            contractShouldThrow('it should not work even when amount is right', () => {
+              return sale.buyFuel(buyer1, {value: amount})
+            })
+
+            describe('one should be able to unpause', () => {
+              beforeEach(async () => {
+                await sale.unpause()
+                walletBalanceBefore = await web3.eth.getBalance(wallet)
+                return sale.buyFuel(buyer1, {value: amount})
+              })
+
+              describe('[should do sale]', buyFuel(amount))
+            })
+          })
+
+          describe('with too much ETH (over 20% of supply)', () => {
+            let quarter = supply / 4
+            let amount = holoWeiToWei(quarter)
+
+            contractShouldThrow('it should not accept the transaction', () => {
+              return sale.buyFuel(buyer1, {value: amount})
+            })
+          })
+
+          describe('with too less ETH (< 0.1ETH)', () => {
+            let amount = web3.toWei(99, 'finney')
+            let walletBalanceBefore
+
+            contractShouldThrow('it should not accept the transaction', () => {
+              return sale.buyFuel(buyer1, {value: amount})
+            })
           })
         })
 
-        describe('with too less ETH (< 0.1ETH)', () => {
-          let amount = web3.toWei(99, 'finney')
-          let walletBalanceBefore
+        describe('when not whitelisted', () => {
+          let amount = holoWeiToWei(supply / 20)
+          contractShouldThrow('it should not work even when amount is right', () => {
+            return sale.buyFuel(anonymous, {value: amount})
+          })
 
-          contractShouldThrow('it should not accept the transaction', () => {
-            return sale.buyFuel(buyer1, {value: amount})
+          describe('but after whitelisting', () => {
+            beforeEach(async () => {
+              await whitelist_contract.whitelist([anonymous])
+              return sale.buyFuel(anonymous, {value: amount})
+            })
+
+            describe('[should do sale]',buyFuel(amount, anonymous))
           })
         })
+
       })
 
       describe('default function', () => {
-        describe('with the right amount of ETH', () => {
-          let amount = holoWeiToWei(supply / 20)
-
-          beforeEach(async () => {
-            walletBalanceBefore = web3.eth.getBalance(wallet)
-            return web3.eth.sendTransaction({
-              to: sale.address,
-              value: amount,
-              from: buyer1,
-              gas: 4000000
-            })
-          })
-
-          describe('[should do sale]', buyFuel(amount))
-        })
-
-        describe('when paused', () => {
-          let amount = holoWeiToWei(supply / 20)
+        describe('when whitelisted', () => {
           beforeEach(() => {
-            return sale.pause()
+            return whitelist_contract.whitelist([buyer1])
           })
+          describe('with the right amount of ETH', () => {
+            let amount = holoWeiToWei(supply / 20)
 
-          contractShouldThrow('it should not work even when amount is right', () => {
-            return web3.eth.sendTransaction({
-              to: sale.address,
-              value: amount,
-              from: buyer1,
-              gas: 4000000
-            })
-          })
-
-          describe('one should be able to unpause', () => {
             beforeEach(async () => {
-              await sale.unpause()
-              walletBalanceBefore = await web3.eth.getBalance(wallet)
+              walletBalanceBefore = web3.eth.getBalance(wallet)
               return web3.eth.sendTransaction({
                 to: sale.address,
                 value: amount,
@@ -250,27 +252,70 @@ contract('HoloSale', (accounts) => {
 
             describe('[should do sale]', buyFuel(amount))
           })
-        })
 
-        describe('with too much ETH (over 20% of supply)', () => {
-          let quarter = supply / 4
-          let amount = holoWeiToWei(quarter) + 100
+          describe('when paused', () => {
+            let amount = holoWeiToWei(supply / 20)
+            beforeEach(() => {
+              return sale.pause()
+            })
 
-          contractShouldThrow('it should not accept the transaction', () => {
-            return web3.eth.sendTransaction({
-              to: sale.address,
-              value: amount,
-              from: buyer1,
-              gas: 4000000
+            contractShouldThrow('it should not work even when amount is right', () => {
+              return web3.eth.sendTransaction({
+                to: sale.address,
+                value: amount,
+                from: buyer1,
+                gas: 4000000
+              })
+            })
+
+            describe('one should be able to unpause', () => {
+              beforeEach(async () => {
+                await sale.unpause()
+                walletBalanceBefore = await web3.eth.getBalance(wallet)
+                return web3.eth.sendTransaction({
+                  to: sale.address,
+                  value: amount,
+                  from: buyer1,
+                  gas: 4000000
+                })
+              })
+
+              describe('[should do sale]', buyFuel(amount))
+            })
+          })
+
+          describe('with too much ETH (over 20% of supply)', () => {
+            let quarter = supply / 4
+            let amount = holoWeiToWei(quarter) + 100
+
+            contractShouldThrow('it should not accept the transaction', () => {
+              return web3.eth.sendTransaction({
+                to: sale.address,
+                value: amount,
+                from: buyer1,
+                gas: 4000000
+              })
+            })
+          })
+
+          describe('with too less ETH (< 0.1ETH)', () => {
+            let amount = web3.toWei(99, 'finney')
+            let walletBalanceBefore
+
+            contractShouldThrow('it should not accept the transaction', () => {
+              return web3.eth.sendTransaction({
+                to: sale.address,
+                value: amount,
+                from: buyer1,
+                gas: 4000000
+              })
             })
           })
         })
 
-        describe('with too less ETH (< 0.1ETH)', () => {
-          let amount = web3.toWei(99, 'finney')
-          let walletBalanceBefore
-
-          contractShouldThrow('it should not accept the transaction', () => {
+        describe('when not whitelisted', () => {
+          let amount = holoWeiToWei(supply / 20)
+          contractShouldThrow('it should not work even when amount is right', () => {
             return web3.eth.sendTransaction({
               to: sale.address,
               value: amount,
@@ -290,6 +335,7 @@ contract('HoloSale', (accounts) => {
           supplyAvailableForSale = await sale.totalSupply.call()
           let twentyPercent = supplyAvailableForSale.toNumber() / 5
           let weiAmount = holoWeiToWei(twentyPercent)
+          await whitelist_contract.whitelist([buyer1, buyer2,buyer3])
           await sale.buyFuel(buyer1, {value: weiAmount, from: buyer1})
           await sale.buyFuel(buyer2, {value: weiAmount, from: buyer2})
           await sale.buyFuel(buyer3, {value: weiAmount, from: buyer3})
@@ -339,6 +385,7 @@ contract('HoloSale', (accounts) => {
             let twentyPercent = supplyAvailableForSale.toNumber() / 5
             let tenPercent = supplyAvailableForSale.toNumber() / 10
             let weiAmount = holoWeiToWei(twentyPercent)
+            await whitelist_contract.whitelist([buyer4, buyer5, buyer6])
             await sale.buyFuel(buyer4, {value: weiAmount, from: buyer4})
             weiAmount = holoWeiToWei(tenPercent)
             await sale.buyFuel(buyer5, {value: weiAmount, from: buyer5})

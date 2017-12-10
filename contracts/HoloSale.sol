@@ -2,6 +2,7 @@ pragma solidity ^0.4.15;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./HoloCredits.sol";
+import "./HoloWhitelist.sol";
 
 // This contract is a crowdsale based on Zeppelin's Crowdsale.sol but with
 // several changes:
@@ -32,6 +33,9 @@ contract HoloSale is Ownable, Pausable{
 
   // The token being minted on sale
   HoloCredits private tokenContract;
+  // The contract to check beneficiaries' address against
+  // and to hold number of reserved tokens per day
+  HoloWhitelist private whitelistContract;
 
   // The account that is allowed to call update()
   // which will happen once per day during the sale period
@@ -110,6 +114,10 @@ contract HoloSale is Ownable, Pausable{
     tokenContract = _tokenContract;
   }
 
+  function setWhitelistContract(HoloWhitelist _whitelistContract) onlyOwner {
+    whitelistContract = _whitelistContract;
+  }
+
   function currentDay() returns (uint) {
     return statsByDay.length;
   }
@@ -131,10 +139,11 @@ contract HoloSale is Ownable, Pausable{
     buyFuel(msg.sender);
   }
 
-  // Main function that checks all conditions and then mints fuel receipts
+  // Main function that checks all conditions and then mints fuel tokens
   // and transfers the ETH to our wallet
   function buyFuel(address beneficiary) payable whenNotPaused{
     require(currentDay() > 0);
+    require(whitelistContract.isWhitelisted(beneficiary));
 
     // Get current day
     Day storage today = statsByDay[statsByDay.length-1];
