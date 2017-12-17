@@ -90,7 +90,7 @@ contract HoloSale is Ownable, Pausable{
     uint256 _startBlock, uint256 _endBlock,
     uint256 _rate,
     uint256 _minimumAmountWei, uint256 _maximumPercentageOfDaysSupply,
-    address _wallet)
+    address _wallet) public
   {
     require(_startBlock >= block.number);
     require(_endBlock >= _startBlock);
@@ -110,31 +110,31 @@ contract HoloSale is Ownable, Pausable{
   // Setters and Getters:
   //---------------------------------------------------------------------------
 
-  function setUpdater(address _updater) onlyOwner {
+  function setUpdater(address _updater) external onlyOwner {
     updater = _updater;
   }
 
-  function setTokenContract(HoloToken _tokenContract) onlyOwner {
+  function setTokenContract(HoloToken _tokenContract) external onlyOwner {
     tokenContract = _tokenContract;
   }
 
-  function setWhitelistContract(HoloWhitelist _whitelistContract) onlyOwner {
+  function setWhitelistContract(HoloWhitelist _whitelistContract) external onlyOwner {
     whitelistContract = _whitelistContract;
   }
 
-  function currentDay() view returns (uint) {
+  function currentDay() public view returns (uint) {
     return statsByDay.length;
   }
 
-  function todaysSupply() view returns (uint) {
+  function todaysSupply() public view returns (uint) {
     return statsByDay[currentDay()-1].supply;
   }
 
-  function todaySold() view returns (uint) {
+  function todaySold() public view returns (uint) {
     return statsByDay[currentDay()-1].soldFromUnreserved + statsByDay[currentDay()-1].soldFromReserved;
   }
 
-  function todayReserved() view returns (uint) {
+  function todayReserved() public view returns (uint) {
     return statsByDay[currentDay()-1].reserved;
   }
 
@@ -143,13 +143,13 @@ contract HoloSale is Ownable, Pausable{
   //---------------------------------------------------------------------------
 
   // Fallback function can be used to buy fuel
-  function () payable {
+  function () public payable {
     buyFuel(msg.sender);
   }
 
   // Main function that checks all conditions and then mints fuel tokens
   // and transfers the ETH to our wallet
-  function buyFuel(address beneficiary) payable whenNotPaused{
+  function buyFuel(address beneficiary) public payable whenNotPaused{
     require(currentDay() > 0);
     require(whitelistContract.isWhitelisted(beneficiary));
     require(beneficiary != 0x0);
@@ -221,7 +221,7 @@ contract HoloSale is Ownable, Pausable{
   }
 
   // Returns false if amount would buy more fuel than we can sell today
-  function lessThanSupply(uint256 amount, Day today) internal constant returns (bool) {
+  function lessThanSupply(uint256 amount, Day today) internal pure returns (bool) {
     return (today.soldFromUnreserved.add(amount) <= today.supply.sub(today.reserved));
   }
 
@@ -230,7 +230,7 @@ contract HoloSale is Ownable, Pausable{
   //---------------------------------------------------------------------------
 
 
-  function update(uint256 newTotalSupply, uint256 reservedTokensNextDay) onlyUpdater {
+  function update(uint256 newTotalSupply, uint256 reservedTokensNextDay) external onlyUpdater {
     totalSupply = newTotalSupply;
     // unsoldTokens is the amount of tokens (*10^18) that we can sell today
     uint256 daysSupply = newTotalSupply - tokenContract.totalSupply();
@@ -250,7 +250,7 @@ contract HoloSale is Ownable, Pausable{
   // => Team ends up with 25% of all tokens.
   // Also calls finishMinting() on the token contract which makes it
   // impossible to mint more.
-  function finalize() onlyOwner {
+  function finalize() external onlyOwner {
     require(!finalized);
     require(hasEnded());
     uint256 receiptsMinted = tokenContract.totalSupply();

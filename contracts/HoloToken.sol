@@ -41,7 +41,7 @@ contract HoloToken is Ownable {
   * @param _to The address to transfer to.
   * @param _value The amount to be transferred.
   */
-  function transfer(address _to, uint256 _value) whenMintingFinished returns (bool) {
+  function transfer(address _to, uint256 _value) public whenMintingFinished returns (bool) {
     balances[msg.sender] = balances[msg.sender].sub(_value);
     balances[_to] = balances[_to].add(_value);
     Transfer(msg.sender, _to, _value);
@@ -53,7 +53,7 @@ contract HoloToken is Ownable {
   * @param _owner The address to query the the balance of.
   * @return An uint256 representing the amount owned by the passed address.
   */
-  function balanceOf(address _owner) constant returns (uint256 balance) {
+  function balanceOf(address _owner) public view returns (uint256 balance) {
     return balances[_owner];
   }
 
@@ -70,7 +70,7 @@ contract HoloToken is Ownable {
    * @param _to address The address which you want to transfer to
    * @param _value uint256 the amout of tokens to be transfered
    */
-  function transferFrom(address _from, address _to, uint256 _value) whenMintingFinished returns (bool) {
+  function transferFrom(address _from, address _to, uint256 _value) public whenMintingFinished returns (bool) {
     var _allowance = allowed[_from][msg.sender];
 
     // Check is not needed because sub(_allowance, _value) will already throw if this condition is not met
@@ -88,7 +88,7 @@ contract HoloToken is Ownable {
    * @param _spender The address which will spend the funds.
    * @param _value The amount of tokens to be spent.
    */
-  function approve(address _spender, uint256 _value) whenMintingFinished returns (bool) {
+  function approve(address _spender, uint256 _value) public whenMintingFinished returns (bool) {
 
     // To change the approve amount you first have to reduce the addresses`
     //  allowance to zero by calling `approve(_spender, 0)` if it is not
@@ -107,7 +107,7 @@ contract HoloToken is Ownable {
    * @param _spender address The address which will spend the funds.
    * @return A uint256 specifing the amount of tokens still avaible for the spender.
    */
-  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+  function allowance(address _owner, address _spender) public constant returns (uint256 remaining) {
     return allowed[_owner][_spender];
   }
 
@@ -134,11 +134,11 @@ contract HoloToken is Ownable {
     _;
   }
 
-  function setMinter(address _minter) public onlyOwner {
+  function setMinter(address _minter) external onlyOwner {
     minter = _minter;
   }
 
-  function mint(address _to, uint256 _amount) onlyMinter canMint  returns (bool) {
+  function mint(address _to, uint256 _amount) external onlyMinter canMint  returns (bool) {
     require(balances[_to] + _amount > balances[_to]); // Guard against overflow
     require(totalSupply + _amount > totalSupply);     // Guard against overflow  (this should never happen)
     totalSupply = totalSupply.add(_amount);
@@ -147,7 +147,7 @@ contract HoloToken is Ownable {
     return true;
   }
 
-  function finishMinting() onlyMinter returns (bool) {
+  function finishMinting() external onlyMinter returns (bool) {
     mintingFinished = true;
     MintingFinished();
     return true;
@@ -164,11 +164,11 @@ contract HoloToken is Ownable {
      _;
   }
 
-  function setDestroyer(address _destroyer) onlyOwner {
+  function setDestroyer(address _destroyer) external onlyOwner {
     destroyer = _destroyer;
   }
 
-  function burn(uint256 _amount) onlyDestroyer {
+  function burn(uint256 _amount) external onlyDestroyer {
     require(balances[destroyer] >= _amount && _amount > 0);
     balances[destroyer] = balances[destroyer].sub(_amount);
     totalSupply = totalSupply.sub(_amount);
