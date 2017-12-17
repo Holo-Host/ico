@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.18;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./HoloToken.sol";
@@ -122,19 +122,19 @@ contract HoloSale is Ownable, Pausable{
     whitelistContract = _whitelistContract;
   }
 
-  function currentDay() returns (uint) {
+  function currentDay() view returns (uint) {
     return statsByDay.length;
   }
 
-  function todaysSupply() returns (uint) {
+  function todaysSupply() view returns (uint) {
     return statsByDay[currentDay()-1].supply;
   }
 
-  function todaySold() returns (uint) {
+  function todaySold() view returns (uint) {
     return statsByDay[currentDay()-1].soldFromUnreserved + statsByDay[currentDay()-1].soldFromReserved;
   }
 
-  function todayReserved() returns (uint) {
+  function todayReserved() view returns (uint) {
     return statsByDay[currentDay()-1].reserved;
   }
 
@@ -215,13 +215,13 @@ contract HoloSale is Ownable, Pausable{
 
   // Returns true if amount + plus fuel bought today already is not above
   // the maximum share one could buy today
-  function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal returns (bool) {
+  function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal constant returns (bool) {
     uint256 boughtTodayBefore = today.fuelBoughtByAddress[beneficiary];
     return (boughtTodayBefore.add(amount).mul(100).div(maximumPercentageOfDaysSupply) <= today.supply);
   }
 
   // Returns false if amount would buy more fuel than we can sell today
-  function lessThanSupply(uint256 amount, Day today) internal returns (bool) {
+  function lessThanSupply(uint256 amount, Day today) internal constant returns (bool) {
     return (today.soldFromUnreserved.add(amount) <= today.supply.sub(today.reserved));
   }
 

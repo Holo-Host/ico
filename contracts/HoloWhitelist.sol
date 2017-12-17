@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.18;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 // This contract holds a mapping of known funders with:
@@ -51,14 +51,14 @@ contract HoloWhitelist is Ownable {
   }
 
   // Used in HoloSale to check if funder is allowed
-  function isWhitelisted(address funder) returns (bool) {
+  function isWhitelisted(address funder) view returns (bool) {
     return knownFunders[funder].whitelisted;
   }
 
   // Used in HoloSale to get reserved tokens per funder
   // and per day.
   // * day is 0-based
-  function reservedTokens(address funder, uint day) returns (uint256) {
+  function reservedTokens(address funder, uint day) view returns (uint256) {
     return knownFunders[funder].reservedTokensPerDay[day];
   }
 
