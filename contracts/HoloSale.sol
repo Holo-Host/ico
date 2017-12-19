@@ -76,7 +76,7 @@ contract HoloSale is Ownable, Pausable{
   // Converts wei to smallest fraction of Holo tokens.
   // 'rate' is meant to give the factor between weis and full Holo tokens,
   // hence the division by 10^18.
-  function holosForWei(uint256 amountWei) internal constant returns (uint256) {
+  function holosForWei(uint256 amountWei) internal view returns (uint256) {
     return amountWei * rate / 1000000000000000000;
   }
 
@@ -215,7 +215,7 @@ contract HoloSale is Ownable, Pausable{
 
   // Returns true if amount + plus fuel bought today already is not above
   // the maximum share one could buy today
-  function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal constant returns (bool) {
+  function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal view returns (bool) {
     uint256 boughtTodayBefore = today.fuelBoughtByAddress[beneficiary];
     return (boughtTodayBefore.add(amount).mul(100).div(maximumPercentageOfDaysSupply) <= today.supply);
   }
