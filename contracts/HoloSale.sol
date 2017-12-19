@@ -232,7 +232,7 @@ contract HoloSale is Ownable, Pausable{
 
   function update(uint256 newTotalSupply, uint256 reservedTokensNextDay) external onlyUpdater {
     totalSupply = newTotalSupply;
-    // unsoldTokens is the amount of tokens (*10^18) that we can sell today
+    // daysSupply is the amount of tokens (*10^18) that we can sell today
     uint256 daysSupply = newTotalSupply.sub(tokenContract.totalSupply());
     statsByDay.push(Day(daysSupply, 0, reservedTokensNextDay, 0));
   }
