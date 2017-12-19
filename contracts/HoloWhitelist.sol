@@ -12,7 +12,7 @@ contract HoloWhitelist is Ownable {
     mapping(uint => uint256) reservedTokensPerDay;
   }
 
-  mapping(address => KnownFunder) knownFunders;
+  mapping(address => KnownFunder) public knownFunders;
 
   modifier onlyUpdater {
     require(msg.sender == updater);

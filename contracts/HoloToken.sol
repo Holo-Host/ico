@@ -34,7 +34,7 @@ contract HoloToken is Ownable {
 
   using SafeMath for uint256;
 
-  mapping(address => uint256) balances;
+  mapping(address => uint256) public balances;
 
   /**
   * @dev transfer token for a specified address
@@ -65,7 +65,7 @@ contract HoloToken is Ownable {
   //=====================================================================================
   // Zeppelin StandardToken (plus modifier to not allow transfers during minting period):
   //=====================================================================================
-  mapping (address => mapping (address => uint256)) allowed;
+  mapping (address => mapping (address => uint256)) public allowed;
 
 
   /**

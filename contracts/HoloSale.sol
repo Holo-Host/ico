@@ -126,15 +126,15 @@ contract HoloSale is Ownable, Pausable{
     return statsByDay.length;
   }
 
-  function todaysSupply() public view returns (uint) {
+  function todaysSupply() external view returns (uint) {
     return statsByDay[currentDay()-1].supply;
   }
 
-  function todaySold() public view returns (uint) {
+  function todaySold() external view returns (uint) {
     return statsByDay[currentDay()-1].soldFromUnreserved + statsByDay[currentDay()-1].soldFromReserved;
   }
 
-  function todayReserved() public view returns (uint) {
+  function todayReserved() external view returns (uint) {
     return statsByDay[currentDay()-1].reserved;
   }
 
