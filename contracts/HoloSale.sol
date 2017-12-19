@@ -166,7 +166,7 @@ contract HoloSale is Ownable, Pausable{
     uint256 reservedHolos = whitelistContract.reservedTokens(beneficiary, dayIndex);
     // If they do, make sure to subtract what they bought already today
     uint256 alreadyBought = today.fuelBoughtByAddress[beneficiary];
-    if(alreadyBought > reservedHolos) {
+    if(alreadyBought >= reservedHolos) {
       reservedHolos = 0;
     } else {
       reservedHolos = reservedHolos.sub(alreadyBought);
