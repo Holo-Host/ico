@@ -360,6 +360,31 @@ contract('HoloToken', (accounts) => {
           await token.finishMinting()
         })
 
+
+        describe('validating allowance updates to spender', function() {
+          let preApproved;
+          contractIt('should start with zero', async function() {
+            preApproved = await token.allowance(accounts[0], accounts[1]);
+            expect(preApproved.toNumber()).to.equal(0);
+          })
+
+          contractIt('should increase by 50 then decrease by 10', async function() {
+            await token.increaseApproval(accounts[1], 50);
+            let postIncrease = await token.allowance(accounts[0], accounts[1]);
+            expect(preApproved.plus(50).toNumber()).to.equal(postIncrease.toNumber());
+            await token.decreaseApproval(accounts[1], 10);
+            let postDecrease = await token.allowance(accounts[0], accounts[1]);
+            expect(postIncrease.minus(10).toNumber()).to.equal(postDecrease.toNumber());
+          })
+        })
+
+        it('should increase by 50 then set to 0 when decreasing by more than 50', async function() {
+          await token.approve(accounts[1], 50);
+          await token.decreaseApproval(accounts[1], 60);
+          let postDecrease = await token.allowance(accounts[0], accounts[1]);
+          expect(postDecrease.toNumber()).to.equal(0);
+        })
+
         contractIt('manager can approve allowance for spender to spend', (done) => {
           let manager, spender
 
