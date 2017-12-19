@@ -217,12 +217,12 @@ contract HoloSale is Ownable, Pausable{
   // the maximum share one could buy today
   function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal view returns (bool) {
     uint256 boughtTodayBefore = today.fuelBoughtByAddress[beneficiary];
-    return (boughtTodayBefore.add(amount).mul(100).div(maximumPercentageOfDaysSupply) <= today.supply);
+    return boughtTodayBefore.add(amount).mul(100).div(maximumPercentageOfDaysSupply) <= today.supply;
   }
 
   // Returns false if amount would buy more fuel than we can sell today
   function lessThanSupply(uint256 amount, Day today) internal pure returns (bool) {
-    return (today.soldFromUnreserved.add(amount) <= today.supply.sub(today.reserved));
+    return today.soldFromUnreserved.add(amount) <= today.supply.sub(today.reserved);
   }
 
   //---------------------------------------------------------------------------
