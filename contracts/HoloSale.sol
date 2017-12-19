@@ -27,7 +27,7 @@ contract HoloSale is Ownable, Pausable{
   // Ratio of the current supply a transaction is allowed to by
   uint256 public maximumPercentageOfDaysSupply;
   // Minimum amount of wei a transaction has to send
-  uint256 public minimumAmoutWei;
+  uint256 public minimumAmountWei;
   // address where funds are being send to on successful buy
   address public wallet;
 
@@ -102,7 +102,7 @@ contract HoloSale is Ownable, Pausable{
     endBlock = _endBlock;
     rate = _rate;
     maximumPercentageOfDaysSupply = _maximumPercentageOfDaysSupply;
-    minimumAmoutWei = _minimumAmountWei;
+    minimumAmountWei = _minimumAmountWei;
     wallet = _wallet;
   }
 
@@ -187,7 +187,7 @@ contract HoloSale is Ownable, Pausable{
       // If this transaction is not claiming reserved tokens
       // it has to be over the minimum.
       // (Reserved tokens must be claimable even if it would be just few)
-      require(msg.value >= minimumAmoutWei);
+      require(msg.value >= minimumAmountWei);
     }
 
     // The non-reserved tokens asked must not exceed the max-ratio
