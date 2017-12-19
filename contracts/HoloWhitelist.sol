@@ -20,7 +20,7 @@ contract HoloWhitelist is Ownable {
   }
 
   function HoloWhitelist() public {
-    updater = tx.origin;
+    updater = msg.sender;
   }
 
   function setUpdater(address new_updater) external onlyOwner {
