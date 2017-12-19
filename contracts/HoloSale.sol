@@ -187,7 +187,7 @@ contract HoloSale is Ownable, Pausable{
       // If this transaction is not claiming reserved tokens
       // it has to be over the minimum.
       // (Reserved tokens must be claimable even if it would be just few)
-      require(msg.value > minimumAmoutWei);
+      require(msg.value >= minimumAmoutWei);
     }
 
     // The non-reserved tokens asked must not exceed the max-ratio
