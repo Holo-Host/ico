@@ -12,7 +12,7 @@ contract HoloWhitelist is Ownable {
     mapping(uint => uint256) reservedTokensPerDay;
   }
 
-  mapping(address => KnownFunder) knownFunders;
+  mapping(address => KnownFunder) public knownFunders;
 
   modifier onlyUpdater {
     require(msg.sender == updater);
@@ -20,7 +20,7 @@ contract HoloWhitelist is Ownable {
   }
 
   function HoloWhitelist() public {
-    updater = tx.origin;
+    updater = msg.sender;
   }
 
   function setUpdater(address new_updater) external onlyOwner {

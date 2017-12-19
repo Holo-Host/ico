@@ -27,7 +27,7 @@ contract HoloSale is Ownable, Pausable{
   // Ratio of the current supply a transaction is allowed to by
   uint256 public maximumPercentageOfDaysSupply;
   // Minimum amount of wei a transaction has to send
-  uint256 public minimumAmoutWei;
+  uint256 public minimumAmountWei;
   // address where funds are being send to on successful buy
   address public wallet;
 
@@ -76,7 +76,7 @@ contract HoloSale is Ownable, Pausable{
   // Converts wei to smallest fraction of Holo tokens.
   // 'rate' is meant to give the factor between weis and full Holo tokens,
   // hence the division by 10^18.
-  function holosForWei(uint256 amountWei) internal constant returns (uint256) {
+  function holosForWei(uint256 amountWei) internal view returns (uint256) {
     return amountWei * rate / 1000000000000000000;
   }
 
@@ -102,7 +102,7 @@ contract HoloSale is Ownable, Pausable{
     endBlock = _endBlock;
     rate = _rate;
     maximumPercentageOfDaysSupply = _maximumPercentageOfDaysSupply;
-    minimumAmoutWei = _minimumAmountWei;
+    minimumAmountWei = _minimumAmountWei;
     wallet = _wallet;
   }
 
@@ -126,15 +126,15 @@ contract HoloSale is Ownable, Pausable{
     return statsByDay.length;
   }
 
-  function todaysSupply() public view returns (uint) {
+  function todaysSupply() external view returns (uint) {
     return statsByDay[currentDay()-1].supply;
   }
 
-  function todaySold() public view returns (uint) {
+  function todaySold() external view returns (uint) {
     return statsByDay[currentDay()-1].soldFromUnreserved + statsByDay[currentDay()-1].soldFromReserved;
   }
 
-  function todayReserved() public view returns (uint) {
+  function todayReserved() external view returns (uint) {
     return statsByDay[currentDay()-1].reserved;
   }
 
@@ -166,7 +166,7 @@ contract HoloSale is Ownable, Pausable{
     uint256 reservedHolos = whitelistContract.reservedTokens(beneficiary, dayIndex);
     // If they do, make sure to subtract what they bought already today
     uint256 alreadyBought = today.fuelBoughtByAddress[beneficiary];
-    if(alreadyBought > reservedHolos) {
+    if(alreadyBought >= reservedHolos) {
       reservedHolos = 0;
     } else {
       reservedHolos = reservedHolos.sub(alreadyBought);
@@ -187,7 +187,7 @@ contract HoloSale is Ownable, Pausable{
       // If this transaction is not claiming reserved tokens
       // it has to be over the minimum.
       // (Reserved tokens must be claimable even if it would be just few)
-      require(msg.value > minimumAmoutWei);
+      require(msg.value >= minimumAmountWei);
     }
 
     // The non-reserved tokens asked must not exceed the max-ratio
@@ -215,14 +215,14 @@ contract HoloSale is Ownable, Pausable{
 
   // Returns true if amount + plus fuel bought today already is not above
   // the maximum share one could buy today
-  function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal constant returns (bool) {
+  function lessThanMaxRatio(address beneficiary, uint256 amount, Day storage today) internal view returns (bool) {
     uint256 boughtTodayBefore = today.fuelBoughtByAddress[beneficiary];
-    return (boughtTodayBefore.add(amount).mul(100).div(maximumPercentageOfDaysSupply) <= today.supply);
+    return boughtTodayBefore.add(amount).mul(100).div(maximumPercentageOfDaysSupply) <= today.supply;
   }
 
   // Returns false if amount would buy more fuel than we can sell today
   function lessThanSupply(uint256 amount, Day today) internal pure returns (bool) {
-    return (today.soldFromUnreserved.add(amount) <= today.supply.sub(today.reserved));
+    return today.soldFromUnreserved.add(amount) <= today.supply.sub(today.reserved);
   }
 
   //---------------------------------------------------------------------------
@@ -232,8 +232,8 @@ contract HoloSale is Ownable, Pausable{
 
   function update(uint256 newTotalSupply, uint256 reservedTokensNextDay) external onlyUpdater {
     totalSupply = newTotalSupply;
-    // unsoldTokens is the amount of tokens (*10^18) that we can sell today
-    uint256 daysSupply = newTotalSupply - tokenContract.totalSupply();
+    // daysSupply is the amount of tokens (*10^18) that we can sell today
+    uint256 daysSupply = newTotalSupply.sub(tokenContract.totalSupply());
     statsByDay.push(Day(daysSupply, 0, reservedTokensNextDay, 0));
   }
 
