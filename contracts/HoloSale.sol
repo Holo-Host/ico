@@ -138,6 +138,10 @@ contract HoloSale is Ownable, Pausable{
     return statsByDay[currentDay()-1].reserved;
   }
 
+  function boughtToday(address beneficiary) external view returns (uint) {
+    return statsByDay[currentDay()-1].fuelBoughtByAddress[beneficiary];
+  }
+
   //---------------------------------------------------------------------------
   // Sending money / adding asks
   //---------------------------------------------------------------------------
