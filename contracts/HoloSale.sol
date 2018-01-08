@@ -66,7 +66,7 @@ contract HoloSale is Ownable, Pausable{
   Day[] public statsByDay;
 
   event CreditsCreated(address beneficiary, uint256 amountWei, uint256 amountHolos);
-
+  event Update(uint256 newTotalSupply, uint256 reservedTokensNextDay);
 
   modifier onlyUpdater {
     require(msg.sender == updater);
@@ -239,6 +239,7 @@ contract HoloSale is Ownable, Pausable{
     // daysSupply is the amount of tokens (*10^18) that we can sell today
     uint256 daysSupply = newTotalSupply.sub(tokenContract.totalSupply());
     statsByDay.push(Day(daysSupply, 0, reservedTokensNextDay, 0));
+    Update(newTotalSupply, reservedTokensNextDay);
   }
 
   //---------------------------------------------------------------------------

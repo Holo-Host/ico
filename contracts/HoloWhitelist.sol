@@ -14,6 +14,9 @@ contract HoloWhitelist is Ownable {
 
   mapping(address => KnownFunder) public knownFunders;
 
+  event Whitelisted(address[] funders);
+  event ReservedTokensSet(uint day, address[] funders, uint256[] reservedTokens);
+
   modifier onlyUpdater {
     require(msg.sender == updater);
     _;
@@ -32,6 +35,7 @@ contract HoloWhitelist is Ownable {
     for (uint i = 0; i < funders.length; i++) {
         knownFunders[funders[i]].whitelisted = true;
     }
+    Whitelisted(funders);
   }
 
   // Removes funders from the whitelist in batches.
@@ -48,6 +52,7 @@ contract HoloWhitelist is Ownable {
     for (uint i = 0; i < funders.length; i++) {
         knownFunders[funders[i]].reservedTokensPerDay[day] = reservedTokens[i];
     }
+    ReservedTokensSet(day, funders, reservedTokens);
   }
 
   // Used in HoloSale to check if funder is allowed
