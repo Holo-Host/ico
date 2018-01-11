@@ -5,6 +5,10 @@ This repository holds the three smart contracts that constitute the on-chain par
 2. **HoloToken:** an ERC20 contract that mints Holo tokens (that act as surrogate for ) during the sale period and can destroy tokens in the later phase, when they are converted to Holo Fuel once the Holo network launches.
 3. **HoloWhitelist** basically a mapping of addresses to a whitelist flag. It also stores number of reserved tokens per day for funders who proved to be an active part of the ecosystem (developer or host).
 
+## Audit
+This code was audited by [one up](http://www.blockchain.company/) in December 2017.
+The review was published [here](https://github.com/BlockChainCompany/holo-token-review/blob/master/REVIEW.md).
+
 ## Context
 Holo will be pre selling its hosting credits (Holo Fuel) at a fixed price and with a dynamic cap in the form of an ERC20 token that acts as a surrogate for hosting credits that we will provide as a Holochain app once the Holo network has launched. A set of coordinated Ethereum contracts manage the supply and purchase of these tokens over the sale period.
 
