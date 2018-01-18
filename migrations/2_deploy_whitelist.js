@@ -3,6 +3,13 @@ const HoloSale = artifacts.require("./HoloSale.sol");
 const HoloWhitelist = artifacts.require("./HoloWhitelist.sol");
 
 module.exports = function(deployer, network, accounts) {
+  let updater = "0x06305Df92eb9Db92C9ec32eAaE5B30BB97c6Ea8b"
+  deployer.deploy(HoloWhitelist).then((whitelist) => {
+    whitelist.setUpdater(updater);
+  })
+}
+/*
+module.exports = function(deployer, network, accounts) {
   let sale, whitelist
   deployer.deploy(HoloToken).then(() => {
     wei_to_eth = 1000000000000000000
@@ -29,4 +36,4 @@ module.exports = function(deployer, network, accounts) {
   }).then(() => {
     return sale.setWhitelistContract(whitelist.address)
   })
-};
+};*/
